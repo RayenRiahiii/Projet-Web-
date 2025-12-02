@@ -1,0 +1,69 @@
+<div class="tasks-page" *ngIf="!loading; else loadingTpl">
+  <div class="header">
+    <div>
+      <p class="eyebrow">Taches</p>
+      <h1>Vos prochaines actions</h1>
+      <p class="muted">Classement par statut et priorite.</p>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <p class="label">Total</p>
+        <h3>{{ stats.total }}</h3>
+      </div>
+      <div class="stat">
+        <p class="label">En cours</p>
+        <h3>{{ stats.inProgress }}</h3>
+      </div>
+      <div class="stat">
+        <p class="label">Terminees</p>
+        <h3>{{ stats.done }}</h3>
+      </div>
+      <div class="stat alert">
+        <p class="label">Echeances < 3j</p>
+        <h3>{{ stats.dueSoon }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button [class.active]="activeFilter === 'ALL'" (click)="applyFilter('ALL')">Toutes</button>
+    <button [class.active]="activeFilter === 'A_FAIRE'" (click)="applyFilter('A_FAIRE')">A faire</button>
+    <button [class.active]="activeFilter === 'EN_COURS'" (click)="applyFilter('EN_COURS')">En cours</button>
+    <button [class.active]="activeFilter === 'TERMINEE'" (click)="applyFilter('TERMINEE')">Terminees</button>
+  </div>
+
+  <div class="grid">
+    <div class="card" *ngFor="let task of filtered; trackBy: trackById">
+      <div class="card-header">
+        <div>
+          <p class="name">{{ task.nom }}</p>
+          <p class="muted small">{{ task.projet?.nom || 'Projet a definir' }}</p>
+        </div>
+        <span class="pill">{{ task.priorite }}</span>
+      </div>
+      <p class="muted small" *ngIf="task.description">{{ task.description }}</p>
+      <div class="meta">
+        <span class="pill muted-chip">Statut {{ task.statut }}</span>
+        <span class="pill soft">{{ dueLabel(task) }}</span>
+      </div>
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="progressValue(task)"></div>
+      </div>
+      <div class="actions">
+        <button class="ghost" (click)="updateStatus(task, 'EN_COURS')" [disabled]="task.statut === 'EN_COURS'">Demarrer</button>
+        <button class="primary" (click)="updateStatus(task, 'TERMINEE')" [disabled]="task.statut === 'TERMINEE'">Terminer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty" *ngIf="filtered.length === 0">
+    <p class="muted">Aucune tache pour ce filtre.</p>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loader">
+    <div class="spinner"></div>
+    <p>Chargement des taches...</p>
+  </div>
+</ng-template>

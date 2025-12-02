@@ -1,0 +1,155 @@
+<div class="dashboard" *ngIf="!loading; else loadingTpl">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Espace admin</p>
+      <h1>Tableau de bord global</h1>
+      <p class="muted">Suivi instantane des utilisateurs, projets et taches.</p>
+    </div>
+    <div class="hero-actions">
+      <a routerLink="/admin/gestion-utilisateurs" class="ghost">Utilisateurs</a>
+      <a routerLink="/admin/gestion-projets" class="primary">Nouveau projet</a>
+    </div>
+  </div>
+
+  <div class="grid stats">
+    <div class="stat-card">
+      <p class="label">Utilisateurs</p>
+      <h3>{{ stats.totalUsers }}</h3>
+      <div class="pill-row">
+        <span class="pill">Admins {{ stats.admins }}</span>
+        <span class="pill">Managers {{ stats.managers }}</span>
+        <span class="pill">Devs {{ stats.developers }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <p class="label">Projets</p>
+      <h3>{{ stats.projects }}</h3>
+      <p class="muted">En cours: {{ stats.projectsActive }}</p>
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="(stats.projectsActive / (stats.projects || 1)) * 100"></div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <p class="label">Taches en file</p>
+      <h3>{{ stats.tasksTodo }}</h3>
+      <p class="muted">Terminees {{ stats.tasksDone }}</p>
+      <div class="progress green">
+        <div class="progress-bar" [style.width.%]="stats.completion"></div>
+      </div>
+    </div>
+    <div class="stat-card highlight">
+      <p class="label">Taux de completion</p>
+      <h3>{{ stats.completion }}%</h3>
+      <p class="muted">Base sur l ensemble des taches</p>
+    </div>
+  </div>
+
+  <div class="grid two-col">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Projets</p>
+          <h2>Les plus actifs</h2>
+        </div>
+        <a routerLink="/admin/gestion-projets" class="text-link">Voir tout</a>
+      </div>
+
+      <div class="project-row" *ngFor="let project of highlightedProjects; trackBy: trackById">
+        <div>
+          <p class="project-name">{{ project.nom }}</p>
+          <p class="muted small">{{ project.description || 'Pas de description' }}</p>
+          <div class="tags">
+            <span class="pill soft">{{ project.statut }}</span>
+            <span class="pill">{{ project.type }}</span>
+            <span class="pill muted-chip">Chef {{ project.manager?.nom || 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="progress mini">
+          <div class="progress-bar" [style.width.%]="project.pourcentageAvancement || 0"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Equipe</p>
+          <h2>Personnes a surveiller</h2>
+        </div>
+        <a routerLink="/admin/gestion-utilisateurs" class="text-link">Gerer</a>
+      </div>
+      <div class="people">
+        <div class="person" *ngFor="let member of team; trackBy: trackById">
+          <div class="avatar" [style.backgroundImage]="'url(' + photoUrl(member.photo) + ')'">
+          </div>
+          <div>
+            <p class="name">{{ member.nom }}</p>
+            <p class="muted small">{{ member.role }}</p>
+          </div>
+          <span class="pill" [class.online]="member.disponibilite">Disponibilite</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid two-col">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Delais</p>
+          <h2>Prochaines echeances</h2>
+        </div>
+        <a routerLink="/admin/gestion-projets" class="text-link">Planifier</a>
+      </div>
+      <div class="deadline" *ngFor="let task of upcomingTasks; trackBy: trackById">
+        <div>
+          <p class="name">{{ task.nom }}</p>
+          <p class="muted small">Projet {{ task.projet?.nom || 'A definir' }}</p>
+        </div>
+        <div class="date">{{ task.dateLimite | date:'dd MMM' }}</div>
+      </div>
+      <div class="empty" *ngIf="upcomingTasks.length === 0">
+        <p class="muted">Aucune echeance proche</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Actions rapides</p>
+          <h2>Raccourcis</h2>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <a routerLink="/admin/gestion-utilisateurs" class="quick-card">
+          <span class="icon-dot"></span>
+          <div>
+            <p class="name">Ajouter un compte</p>
+            <p class="muted small">Inviter ou activer un utilisateur</p>
+          </div>
+        </a>
+        <a routerLink="/admin/gestion-projets" class="quick-card">
+          <span class="icon-dot"></span>
+          <div>
+            <p class="name">Planifier un projet</p>
+            <p class="muted small">Creer, assigner et suivre</p>
+          </div>
+        </a>
+        <a routerLink="/admin/rapports" class="quick-card">
+          <span class="icon-dot"></span>
+          <div>
+            <p class="name">Consulter les rapports</p>
+            <p class="muted small">Envoyer ou telecharger</p>
+          </div>
+        </a>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loader">
+    <div class="spinner"></div>
+    <p>Chargement du tableau de bord...</p>
+  </div>
+</ng-template>

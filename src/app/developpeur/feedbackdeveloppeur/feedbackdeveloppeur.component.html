@@ -1,0 +1,185 @@
+<div class="feedback-container">
+  <!-- Notification messages -->
+  <div class="notification error" *ngIf="error">
+    <p>{{ error }}</p>
+    <button class="close-btn" (click)="error = null">×</button>
+  </div>
+
+  <!-- Header section -->
+  <div class="feedback-header">
+    <h1>Mes évaluations & performances</h1>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-cards">
+    <div class="kpi-card">
+      <div class="kpi-icon">
+        <i class="fas fa-bullseye"></i>
+      </div>
+      <div class="kpi-content">
+        <h3>Points cumulés</h3>
+        <div class="kpi-value">{{ totalPoints }} / 200</div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="kpi-content">
+        <h3>Progression</h3>
+        <div class="kpi-value">{{ totalPoints }} / 200</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="(totalPoints / 200) * 100"></div>
+          </div>
+          <div class="progress-labels">
+            <span>Prime</span>
+            <span>Augmentation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">
+        <i class="fas fa-trophy"></i>
+      </div>
+      <div class="kpi-content">
+        <h3>Récompenses</h3>
+        <div *ngIf="totalPoints < 100" class="reward-message">
+          <p>Atteignez 100 points pour obtenir une prime!</p>
+        </div>
+        <div *ngIf="totalPoints >= 100 && totalPoints < 200" class="reward-message achieved">
+          <p><i class="fas fa-check-circle"></i> Prime débloquée!</p>
+        </div>
+        <div *ngIf="totalPoints >= 200" class="reward-message achieved">
+          <p><i class="fas fa-check-circle"></i> Prime débloquée!</p>
+          <p><i class="fas fa-check-circle"></i> Augmentation de salaire débloquée!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Feedback Cards -->
+  <div class="section-title">
+    <h2>Projets déjà évalués</h2>
+  </div>
+  
+  <div class="recent-feedback-cards">
+    <div class="feedback-card" *ngFor="let feedback of recentFeedbacks">
+      <div class="feedback-card-header">
+        <h3>{{ feedback.project?.nom || 'Projet' }}</h3>
+        <span class="feedback-date">{{ formatDate(feedback.createdAt) }}</span>
+      </div>
+      <div class="feedback-card-score">
+        <div class="score-display">
+          {{ getScoreDisplay(feedback.score10) }}/10
+        </div>
+      </div>
+      <div class="feedback-card-comment" *ngIf="feedback.commentaire">
+        {{ feedback.commentaire }}
+      </div>
+      <div class="feedback-card-comment" *ngIf="!feedback.commentaire">
+        Aucun commentaire
+      </div>
+    </div>
+    
+    <!-- Empty state if no feedback -->
+    <div class="empty-feedback" *ngIf="!loading && recentFeedbacks.length === 0">
+      <p>Aucune évaluation n'a encore été enregistrée.</p>
+    </div>
+  </div>
+
+  <!-- Projects pending feedback -->
+  <div class="section-title">
+    <h2>Projets en attente d'évaluation</h2>
+  </div>
+  
+  <div class="table-container">
+    <table class="projects-table" *ngIf="projectsWithoutFeedback.length > 0">
+      <thead>
+        <tr>
+          <th>Projet</th>
+          <th>Statut</th>
+          <th>Date de fin</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let project of projectsWithoutFeedback">
+          <td>{{ project.nom }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="{
+              'terminated': project.statut === 'TERMINE',
+              'in-progress': project.statut === 'EN_COURS'
+            }">
+              {{ project.statut === 'TERMINE' ? 'TERMINÉ' : 'EN_COURS' }}
+            </span>
+          </td>
+          <td>{{ project.dateFinEffective ? formatDate(project.dateFinEffective) : formatDate(project.dateFinPrevue) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <!-- Empty state if no pending projects -->
+    <div class="empty-feedback" *ngIf="!loading && projectsWithoutFeedback.length === 0">
+      <p>Aucun projet en attente d'évaluation.</p>
+    </div>
+  </div>
+
+  <!-- Complete feedback table -->
+  <div class="section-title">
+    <h2>Mes feedbacks complets</h2>
+    <div class="search-section">
+      <input
+        type="text"
+        placeholder="Rechercher par projet..."
+        [(ngModel)]="searchTerm"
+        class="search-input"
+      />
+      <select [(ngModel)]="sortBy" class="sort-select">
+        <option value="date">Trier par date</option>
+        <option value="score">Trier par score</option>
+        <option value="project">Trier par projet</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="table-container">
+    <table class="feedbacks-table" *ngIf="developerFeedbacks.length > 0">
+      <thead>
+        <tr>
+          <th>Projet</th>
+          <th>Qualité du code</th>
+          <th>Respect des délais</th>
+          <th>Travail d'équipe</th>
+          <th>Autonomie</th>
+          <th>Score Final</th>
+          <th>Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let feedback of developerFeedbacks">
+          <td>{{ feedback.project?.nom || 'N/A' }}</td>
+          <td>{{ feedback.qualiteCode }}/5</td>
+          <td>{{ feedback.respectDelais }}/5</td>
+          <td>{{ feedback.travailEquipe }}/5</td>
+          <td>{{ feedback.autonomie }}/5</td>
+          <td class="score-column">{{ getScoreDisplay(feedback.score10) }}/10</td>
+          <td>{{ feedback.commentaire || 'Aucun commentaire' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <!-- Empty state if no feedbacks -->
+    <div class="empty-feedback" *ngIf="!loading && developerFeedbacks.length === 0">
+      <p>Aucune évaluation n'a encore été enregistrée.</p>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-spinner" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+</div>

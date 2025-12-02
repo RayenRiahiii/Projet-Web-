@@ -1,0 +1,27 @@
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+
+app-sidebaradmin,
+app-sidebarmanager,
+app-sidebardeveloppeur {
+  flex: 0 0 250px;
+}
+
+
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  font-family: Arial, sans-serif;
+}
+
+
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px;
+
+}

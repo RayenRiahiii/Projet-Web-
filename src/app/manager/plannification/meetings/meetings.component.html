@@ -1,0 +1,474 @@
+<!-- Calendar Header -->
+<div class="calendar-container" #calendarContainer>
+  <div class="calendar-header">
+    <div class="calendar-title">
+      <h2>{{ monthNames[currentDate.getMonth()] }} {{ currentDate.getFullYear() }}</h2>
+    </div>
+    <div class="calendar-controls">
+      <div class="search-container">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="searchMeetings()" 
+          placeholder="Rechercher une réunion..." 
+          class="search-input"
+        />
+      </div>
+      <button class="calendar-btn today-btn" (click)="currentMonth()">Aujourd'hui</button>
+      <button class="calendar-btn nav-btn" (click)="previousMonth()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="calendar-btn nav-btn" (click)="nextMonth()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+      <button class="calendar-btn add-btn" (click)="toggleAddMeetingModal()">
+        <i class="fas fa-plus"></i> Nouvelle réunion
+      </button>
+    </div>
+  </div>
+
+  <!-- Calendar Weekdays Header -->
+  <div class="calendar-weekdays">
+    <div class="weekday" *ngFor="let weekday of weekdays">{{ weekday }}</div>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div class="calendar-grid" *ngIf="!isLoading">
+    <div 
+      *ngFor="let day of calendarDays" 
+      [ngClass]="getDayClass(day)"
+      cdkDropList
+      [id]="getDropListId(day)"
+      [cdkDropListData]="day.meetings"
+      [cdkDropListConnectedTo]="dropListIds"
+      (cdkDropListDropped)="onDrop($event, day.date)"
+      [cdkDropListDisabled]="!isDateDraggable(day.date)"
+      class="calendar-day"
+    >
+      <div class="day-header">
+        <span class="day-number">{{ day.date.getDate() }}</span>
+      </div>
+      <div class="day-content">
+        <div 
+          *ngFor="let meeting of day.meetings" 
+          [ngClass]="'meeting-item ' + getStatusClass(meeting.statut)"
+          cdkDrag
+          [cdkDragDisabled]="meeting.statut !== 'A_VENIR'"
+          [cdkDragData]="meeting"
+          (click)="openMeetingDetails(meeting)"
+        >
+          <div class="meeting-time">{{ getFormattedTime(meeting.dateHeure) }}</div>
+          <div class="meeting-title">{{ meeting.sujet }}</div>
+          <div *ngIf="meeting.statut === 'A_VENIR'" class="drag-handle" cdkDragHandle>
+            <i class="fas fa-grip-lines"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Chargement des réunions...</p>
+  </div>
+
+  <!-- No Meetings Message -->
+  <div class="no-meetings" *ngIf="!isLoading && filteredMeetings.length === 0">
+    <p>Aucune réunion trouvée pour cette période.</p>
+  </div>
+</div>
+
+<!-- Meeting Details Modal - NOUVEAU DESIGN ULTRA MODERNE -->
+<div class="modal-overlay details-modal-overlay" *ngIf="showMeetingDetailsModal" (click)="closeMeetingDetailsModal()">
+  <div class="modal-content meeting-details-modal" (click)="$event.stopPropagation()">
+    <div class="details-header" *ngIf="selectedMeeting">
+      <div class="meeting-status-badge" [ngClass]="getStatusClass(selectedMeeting.statut)">
+        {{ selectedMeeting.statut === 'A_VENIR' ? 'À venir' : 
+          selectedMeeting.statut === 'EN_COURS' ? 'En cours' : 'Terminé' }}
+      </div>
+      <div class="details-actions-icons" *ngIf="selectedMeeting.statut === 'A_VENIR'">
+        <button class="icon-btn edit-icon" (click)="openEditMeetingModal(selectedMeeting)">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="icon-btn delete-icon" (click)="confirmDeleteMeeting(selectedMeeting)">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+      <button class="close-btn" (click)="closeMeetingDetailsModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="details-content" *ngIf="selectedMeeting">
+      <div class="details-title-section">
+        <h2>{{ selectedMeeting.sujet }}</h2>
+        <div class="details-pill reminder-pill" [ngClass]="{'active-reminder': selectedMeeting.rappel}">
+          <i class="fas" [ngClass]="selectedMeeting.rappel ? 'fa-bell' : 'fa-bell-slash'"></i>
+          <span>{{ selectedMeeting.rappel ? 'Rappel activé' : 'Sans rappel' }}</span>
+        </div>
+      </div>
+      
+      <div class="details-info-card">
+        <div class="details-row">
+          <div class="details-icon-wrap">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="details-text">
+            <span class="details-label">Date</span>
+            <span class="details-value">{{ selectedMeeting.dateHeure | date:'EEEE d MMMM y' }}</span>
+          </div>
+        </div>
+        
+        <div class="details-row">
+          <div class="details-icon-wrap">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="details-text">
+            <span class="details-label">Heure</span>
+            <span class="details-value">{{ selectedMeeting.dateHeure | date:'HH:mm' }}</span>
+          </div>
+        </div>
+        
+        <div class="details-row" *ngIf="selectedMeeting.description">
+          <div class="details-icon-wrap">
+            <i class="fas fa-align-left"></i>
+          </div>
+          <div class="details-text">
+            <span class="details-label">Description</span>
+            <p class="details-description">{{ selectedMeeting.description }}</p>
+          </div>
+        </div>
+        
+        <div class="details-row">
+          <div class="details-icon-wrap">
+            <i class="fas fa-project-diagram"></i>
+          </div>
+          <div class="details-text">
+            <span class="details-label">Projet</span>
+            <span class="details-value">{{ getProjectName(selectedMeeting.projetId) }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Section des participants -->
+      <div class="participants-section" *ngIf="meetingParticipants && meetingParticipants.length > 0">
+        <h3 class="participants-title">
+          <i class="fas fa-users"></i>
+          Participants ({{ meetingParticipants.length }})
+        </h3>
+        
+        <div class="participants-list">
+          <div class="participant-card" *ngFor="let participant of meetingParticipants">
+            <div class="participant-avatar">
+              <span>{{ getInitials(participant.nom) }}</span>
+            </div>
+            <div class="participant-info">
+              <span class="participant-name">{{ participant.nom }}</span>
+              <span class="participant-email">{{ participant.email }}</span>
+            </div>
+          </div>
+          
+          <div class="no-participants" *ngIf="meetingParticipants.length === 0">
+            <p>Aucun participant</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Meeting Modal -->
+<div class="modal-overlay" *ngIf="showAddMeetingModal" (click)="toggleAddMeetingModal()">
+  <div class="modal-content meeting-form-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Nouvelle réunion</h3>
+      <span class="modal-close" (click)="toggleAddMeetingModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="meetingForm" (ngSubmit)="onSubmitMeeting()">
+        <!-- Sujet de la réunion -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-heading input-icon"></i>
+            <input type="text" formControlName="sujet" id="sujet" placeholder=" " />
+            <label for="sujet">Sujet de la réunion</label>
+          </div>
+          <small *ngIf="meetingForm.get('sujet')?.errors?.['required'] && meetingForm.get('sujet')?.touched">
+            Le sujet est obligatoire
+          </small>
+        </div>
+
+        <!-- Sélection du Projet -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-project-diagram input-icon"></i>
+            <select formControlName="projetId" id="projetId" placeholder=" " (change)="onProjectSelect()">
+              <option value="" disabled selected>Sélectionnez un projet</option>
+              <option *ngFor="let projet of projets" [value]="projet.id">{{ projet.nom }}</option>
+            </select>
+            <label for="projetId">Projet associé</label>
+          </div>
+          <small *ngIf="meetingForm.get('projetId')?.errors?.['required'] && meetingForm.get('projetId')?.touched">
+            Le projet est obligatoire
+          </small>
+        </div>
+
+        <!-- Date et Heure -->
+        <div class="form-row">
+          <div class="form-group half">
+            <div class="input-field">
+              <i class="fas fa-calendar-alt input-icon"></i>
+              <input type="date" formControlName="date" id="date" placeholder=" " />
+              <label for="date">Date</label>
+            </div>
+            <small *ngIf="meetingForm.get('date')?.errors?.['required'] && meetingForm.get('date')?.touched">
+              La date est obligatoire
+            </small>
+          </div>
+
+          <div class="form-group half">
+            <div class="input-field">
+              <i class="fas fa-clock input-icon"></i>
+              <input type="time" formControlName="heure" id="heure" placeholder=" " />
+              <label for="heure">Heure</label>
+            </div>
+            <small *ngIf="meetingForm.get('heure')?.errors?.['required'] && meetingForm.get('heure')?.touched">
+              L'heure est obligatoire
+            </small>
+          </div>
+        </div>
+
+        <!-- Sélection des participants -->
+        <div class="form-group">
+          <div class="participants-label">
+            <i class="fas fa-users"></i>
+            <span>Participants</span>
+          </div>
+          
+          <div class="participants-selector" *ngIf="projectDevelopers.length > 0">
+            <div *ngFor="let developer of projectDevelopers" class="participant-checkbox">
+              <input type="checkbox" 
+                [id]="'dev-' + developer.id" 
+                [value]="developer.id"
+                (change)="toggleParticipant(developer.id, $event)" />
+              <label [for]="'dev-' + developer.id">{{ developer.nom }}</label>
+            </div>
+          </div>
+          
+          <div class="no-developers" *ngIf="meetingForm.get('projetId')?.valid && projectDevelopers.length === 0">
+            <p>Aucun développeur assigné à ce projet</p>
+          </div>
+          
+          <div class="select-project-first" *ngIf="!meetingForm.get('projetId')?.valid">
+            <p>Veuillez d'abord sélectionner un projet</p>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <div class="input-field textarea-field">
+            <i class="fas fa-align-left input-icon"></i>
+            <textarea formControlName="description" id="description" placeholder=" " rows="3"></textarea>
+            <label for="description">Description</label>
+          </div>
+        </div>
+
+        <!-- Statut -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-chart-line input-icon"></i>
+            <select formControlName="statut" id="statut" placeholder=" " class="status-select">
+              <option value="A_VENIR">À venir</option>
+              <option value="EN_COURS">En cours</option>
+              <option value="TERMINE">Terminé</option>
+            </select>
+            <label for="statut">Statut</label>
+          </div>
+        </div>
+
+        <!-- Rappel -->
+        <div class="form-group reminder-toggle">
+          <label class="switch-label">
+            <span>Activer le rappel</span>
+            <label class="switch">
+              <input type="checkbox" formControlName="rappel">
+              <span class="slider round"></span>
+            </label>
+          </label>
+        </div>
+
+        <!-- Message d'erreur -->
+        <div class="error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+        <!-- Boutons d'action -->
+        <div class="form-actions">
+          <button type="button" class="cancel-button" (click)="toggleAddMeetingModal()">Annuler</button>
+          <button type="submit" [disabled]="meetingForm.invalid || submitting">
+            <i class="fas fa-save"></i>
+            {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Meeting Modal -->
+<div class="modal-overlay" *ngIf="showEditMeetingModal" (click)="closeEditMeetingModal()">
+  <div class="modal-content meeting-form-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Modifier la réunion</h3>
+      <span class="modal-close" (click)="closeEditMeetingModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="meetingForm" (ngSubmit)="onUpdateMeeting()">
+        <!-- Sujet de la réunion -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-heading input-icon"></i>
+            <input type="text" formControlName="sujet" id="edit-sujet" placeholder=" " />
+            <label for="edit-sujet">Sujet de la réunion</label>
+          </div>
+          <small *ngIf="meetingForm.get('sujet')?.errors?.['required'] && meetingForm.get('sujet')?.touched">
+            Le sujet est obligatoire
+          </small>
+        </div>
+
+        <!-- Sélection du Projet -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-project-diagram input-icon"></i>
+            <select formControlName="projetId" id="edit-projetId" placeholder=" " (change)="onProjectSelect()">
+              <option value="" disabled>Sélectionnez un projet</option>
+              <option *ngFor="let projet of projets" [value]="projet.id">{{ projet.nom }}</option>
+            </select>
+            <label for="edit-projetId">Projet associé</label>
+          </div>
+          <small *ngIf="meetingForm.get('projetId')?.errors?.['required'] && meetingForm.get('projetId')?.touched">
+            Le projet est obligatoire
+          </small>
+        </div>
+
+        <!-- Date et Heure -->
+        <div class="form-row">
+          <div class="form-group half">
+            <div class="input-field">
+              <i class="fas fa-calendar-alt input-icon"></i>
+              <input type="date" formControlName="date" id="edit-date" placeholder=" " />
+              <label for="edit-date">Date</label>
+            </div>
+            <small *ngIf="meetingForm.get('date')?.errors?.['required'] && meetingForm.get('date')?.touched">
+              La date est obligatoire
+            </small>
+          </div>
+
+          <div class="form-group half">
+            <div class="input-field">
+              <i class="fas fa-clock input-icon"></i>
+              <input type="time" formControlName="heure" id="edit-heure" placeholder=" " />
+              <label for="edit-heure">Heure</label>
+            </div>
+            <small *ngIf="meetingForm.get('heure')?.errors?.['required'] && meetingForm.get('heure')?.touched">
+              L'heure est obligatoire
+            </small>
+          </div>
+        </div>
+
+        <!-- Sélection des participants -->
+        <div class="form-group">
+          <div class="participants-label">
+            <i class="fas fa-users"></i>
+            <span>Participants</span>
+          </div>
+          
+          <div class="participants-selector" *ngIf="projectDevelopers.length > 0">
+            <div *ngFor="let developer of projectDevelopers" class="participant-checkbox">
+              <input type="checkbox" 
+                [id]="'edit-dev-' + developer.id" 
+                [value]="developer.id"
+                [checked]="isParticipantSelected(developer.id)"
+                (change)="toggleParticipant(developer.id, $event)" />
+              <label [for]="'edit-dev-' + developer.id">{{ developer.nom }}</label>
+            </div>
+          </div>
+          
+          <div class="no-developers" *ngIf="meetingForm.get('projetId')?.valid && projectDevelopers.length === 0">
+            <p>Aucun développeur assigné à ce projet</p>
+          </div>
+          
+          <div class="select-project-first" *ngIf="!meetingForm.get('projetId')?.valid">
+            <p>Veuillez d'abord sélectionner un projet</p>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <div class="input-field textarea-field">
+            <i class="fas fa-align-left input-icon"></i>
+            <textarea formControlName="description" id="edit-description" placeholder=" " rows="3"></textarea>
+            <label for="edit-description">Description</label>
+          </div>
+        </div>
+
+        <!-- Statut -->
+        <div class="form-group">
+          <div class="input-field">
+            <i class="fas fa-chart-line input-icon"></i>
+            <select formControlName="statut" id="edit-statut" placeholder=" " class="status-select">
+              <option value="A_VENIR">À venir</option>
+              <option value="EN_COURS">En cours</option>
+              <option value="TERMINE">Terminé</option>
+            </select>
+            <label for="edit-statut">Statut</label>
+          </div>
+        </div>
+
+        <!-- Rappel -->
+        <div class="form-group reminder-toggle">
+          <label class="switch-label">
+            <span>Activer le rappel</span>
+            <label class="switch">
+              <input type="checkbox" formControlName="rappel">
+              <span class="slider round"></span>
+            </label>
+          </label>
+        </div>
+
+        <!-- Message d'erreur -->
+        <div class="error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+        <!-- Boutons d'action -->
+        <div class="form-actions">
+          <button type="button" class="cancel-button" (click)="closeEditMeetingModal()">Annuler</button>
+          <button type="submit" [disabled]="meetingForm.invalid || submitting">
+            <i class="fas fa-save"></i>
+            {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation modal pour la suppression -->
+<div class="modal-overlay delete-modal-overlay" *ngIf="showDeleteConfirmation" (click)="closeDeleteConfirmation()">
+  <div class="modal-content delete-confirmation-modal" (click)="$event.stopPropagation()">
+    <div class="delete-header">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h3>Supprimer la réunion</h3>
+    </div>
+    <div class="delete-body">
+      <p>Êtes-vous sûr de vouloir supprimer cette réunion ?</p>
+      <p class="delete-meeting-title">{{ selectedMeeting?.sujet }}</p>
+      <p class="delete-warning">Cette action est irréversible.</p>
+      
+      <div class="delete-actions">
+        <button class="cancel-delete-btn" (click)="closeDeleteConfirmation()">Annuler</button>
+        <button class="confirm-delete-btn" (click)="deleteMeeting()" [disabled]="submitting">
+          {{ submitting ? 'Suppression...' : 'Supprimer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

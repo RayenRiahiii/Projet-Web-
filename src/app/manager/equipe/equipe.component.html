@@ -1,0 +1,65 @@
+<div class="team-page" *ngIf="!loading; else loadingTpl">
+  <div class="header">
+    <div>
+      <p class="eyebrow">Equipe</p>
+      <h1>Developpeurs sous votre pilotage</h1>
+      <p class="muted">Filtrer par disponibilite et competences.</p>
+    </div>
+    <div class="badges">
+      <span class="pill">Total {{ members.length }}</span>
+      <span class="pill soft">Disponibles {{ availableCount }}</span>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <input
+        type="text"
+        placeholder="Rechercher par nom ou email"
+        [(ngModel)]="search"
+        (input)="applyFilters()"
+      />
+    </div>
+    <div class="filter-buttons">
+      <button [class.active]="availability === 'all'" (click)="setAvailability('all')">Tous</button>
+      <button [class.active]="availability === 'available'" (click)="setAvailability('available')">Disponibles</button>
+      <button [class.active]="availability === 'busy'" (click)="setAvailability('busy')">Indisponibles</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" *ngFor="let member of filtered; trackBy: trackById">
+      <div class="card-top">
+        <div class="avatar">{{ member.nom.slice(0,1) }}</div>
+        <div>
+          <p class="name">{{ member.nom }}</p>
+          <p class="muted small">{{ member.email }}</p>
+        </div>
+        <span class="pill" [class.online]="member.disponibilite !== false">
+          {{ member.disponibilite !== false ? 'Disponible' : 'Occupe' }}
+        </span>
+      </div>
+      <div class="meta">
+        <span class="pill muted-chip">Experience {{ member.experiences || 0 }} ans</span>
+        <span class="pill soft">Points {{ member.pointsTotal || 0 }}</span>
+      </div>
+      <p class="muted small">{{ member.competences || 'Competences a definir' }}</p>
+      <div class="actions">
+        <button class="ghost" (click)="toggleAvailability(member)">
+          {{ member.disponibilite !== false ? 'Marquer indisponible' : 'Marquer disponible' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty" *ngIf="filtered.length === 0">
+    <p class="muted">Aucun membre ne correspond a ces filtres.</p>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loader">
+    <div class="spinner"></div>
+    <p>Chargement de l equipe...</p>
+  </div>
+</ng-template>

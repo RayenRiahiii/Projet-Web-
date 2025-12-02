@@ -1,0 +1,40 @@
+<!--PAGE ADMIN -->
+<div *ngIf="showAdminSidebar" class="layout">
+  <app-sidebaradmin></app-sidebaradmin>
+
+  <div class="main-wrapper">
+    <app-navbar></app-navbar> 
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<!--PAGE MANAGER -->
+<div *ngIf="showManSidebar" class="layout">
+  <app-sidebarmanager></app-sidebarmanager>
+
+  <div class="main-wrapper">
+    <app-navbar></app-navbar>
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<!-- PAGE DÉVELOPPEUR -->
+<div *ngIf="showDevSidebar" class="layout">
+  <app-sidebardeveloppeur></app-sidebardeveloppeur>
+
+  <div class="main-wrapper">
+    <app-navbar></app-navbar>
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<!-- LOGIN & AUTRES -->
+<div *ngIf="!showAdminSidebar && !showManSidebar && !showDevSidebar">
+  <router-outlet></router-outlet>
+</div>

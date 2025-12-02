@@ -1,0 +1,134 @@
+<div class="login-page">
+  <!-- Partie gauche : Branding/Image -->
+  <div class="login-left">
+    <div class="branding">
+      <img src="https://images.unsplash.com/photo-1579389083046-e3df9c2b3325?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Arab Soft" class="brand-image" />
+    </div>
+    <div class="particles" id="particles">
+      <!-- Particles will be dynamically added via JS -->
+    </div>
+  </div>
+
+  <!-- Partie droite : Formulaire -->
+  <div class="login-right">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="card">
+      <h2 class="title">Sign In</h2>
+      
+      <!-- Champ e-mail -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#888">
+            <path d="M0 0h24v24H0V0z" fill="none"/>
+            <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/>
+          </svg>
+        <input
+          type="email"
+          formControlName="email"
+          [class.invalid]="f['email'].invalid && (f['email'].dirty || f['email'].touched)"
+            id="email"
+            placeholder=" "
+        />
+          <label for="email">E-mail</label>
+        </div>
+        <small *ngIf="f['email'].errors?.['required'] && (f['email'].dirty || f['email'].touched)">Email is required.</small>
+      </div>
+      
+      <!-- Champ mot de passe -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#888">
+            <path d="M0 0h24v24H0V0z" fill="none"/>
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+          </svg>
+        <input
+          type="password"
+          formControlName="password"
+          [class.invalid]="f['password'].invalid && (f['password'].dirty || f['password'].touched)"
+            id="password"
+            placeholder=" "
+        />
+          <label for="password">Password</label>
+          <svg class="toggle-password" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="#888" (click)="togglePasswordVisibility()">
+            <path d="M0 0h24v24H0V0z" fill="none"/>
+            <path d="M12 6c3.79 0 7.17 2.13 8.82 5.5C19.17 14.87 15.79 17 12 17s-7.17-2.13-8.82-5.5C4.83 8.13 8.21 6 12 6m0-2C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 5c1.38 0 2.5 1.12 2.5 2.5S13.38 14 12 14s-2.5-1.12-2.5-2.5S10.62 9 12 9m0-2c-2.48 0-4.5 2.02-4.5 4.5S9.52 16 12 16s4.5-2.02 4.5-4.5S14.48 7 12 7z"/>
+          </svg>
+        </div>
+        <small *ngIf="f['password'].errors?.['required'] && (f['password'].dirty || f['password'].touched)">Password is required.</small>
+      </div>
+      
+      <!-- Forgot Password -->
+      <div class="forgot-password">
+        <a href="javascript:void(0)">Forgot Password ?</a>
+      </div>
+      
+      <!-- Message d'erreur global -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Bouton de soumission -->
+      <button type="submit" [disabled]="isLoading || loginForm.invalid">
+        {{ isLoading ? 'Signing in...' : 'Sign In' }}
+      </button>
+      
+      <!-- Sign up link -->
+      <div class="signup-link">
+        Don't have an account? <a href="javascript:void(0)">Sign up</a>
+      </div>
+      
+      <!-- Terms and conditions -->
+      <div class="terms">
+        En vous connectant, vous acceptez nos <a href="javascript:void(0)">conditions d'utilisation</a>.
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JS for Particle Effect -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const particlesContainer = document.getElementById('particles');
+    const particleCount = 20;
+    
+    // Create particles
+    for (let i = 0; i < particleCount; i++) {
+      createParticle();
+    }
+    
+    function createParticle() {
+      const particle = document.createElement('span');
+      particle.classList.add('particle');
+      
+      // Random size
+      const size = Math.random() * 15 + 5;
+      particle.style.width = size + 'px';
+      particle.style.height = size + 'px';
+      
+      // Random position
+      particle.style.top = Math.random() * 100 + '%';
+      particle.style.left = Math.random() * 100 + '%';
+      
+      // Random opacity
+      particle.style.opacity = Math.random() * 0.5 + 0.1;
+      
+      // Animation
+      const duration = Math.random() * 20 + 10;
+      particle.style.animation = `float ${duration}s linear infinite`;
+      
+      particlesContainer.appendChild(particle);
+      
+      // Add unique animation
+      particle.style.animationDelay = Math.random() * 10 + 's';
+    }
+    
+    // Toggle password visibility
+    const togglePassword = document.querySelector('.toggle-password');
+    const passwordInput = document.querySelector('input[type="password"]');
+    
+    if (togglePassword && passwordInput) {
+      togglePassword.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+      });
+    }
+  });
+</script>
+  

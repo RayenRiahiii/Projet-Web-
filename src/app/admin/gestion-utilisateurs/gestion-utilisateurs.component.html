@@ -1,0 +1,418 @@
+<div class="users-container">
+  <!-- Message de succès -->
+  <div class="success-message" *ngIf="successMsg">
+    <svg viewBox="0 0 24 24" width="20" height="20" class="success-icon">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+    </svg>
+    {{ successMsg }}
+    <button class="close-message" (click)="successMsg = undefined">×</button>
+  </div>
+  
+  <div class="floating-container">
+    <div class="search-section">
+      <!-- Zone de recherche avec icône cliquable -->
+      <div class="group">
+        <svg class="icon" (click)="toggleSearchCriteria()" aria-hidden="true" viewBox="0 0 24 24"><g><path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"></path></g></svg>
+        <input placeholder="Recherche" type="search" class="input" [(ngModel)]="searchTerm" (input)="searchUsers()">
+      </div>
+
+      <!-- Liste de critères de recherche -->
+      <div class="search-criteria-buttons" *ngIf="showSearchCriteria">
+        <button class="criteria-button" (click)="filterByRole('DEVELOPPEUR')">Développeurs</button>
+        <button class="criteria-button" (click)="filterByRole('MANAGER')">Managers</button>
+        <button class="criteria-button" (click)="filterByRole('ADMIN')">Admins</button>
+        <button class="criteria-button" (click)="filterByAvailability(true)">Disponibles</button>
+        <button class="criteria-button" (click)="filterByAvailability(false)">Indisponibles</button>
+        <button class="criteria-button reset" (click)="resetFilters()">Tout afficher</button>
+      </div>
+
+      <!-- Bouton ajouter -->
+      <button class="add-button" (click)="openAddModal()">Ajouter</button>
+    </div>
+
+    <div class="users-table-container">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of filteredUsers">
+            <td>{{ user.id }}</td>
+            <td>{{ user.nom }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="user.disponibilite ? 'status-active' : 'status-inactive'">
+                {{ user.disponibilite ? 'Actif' : 'Inactif' }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <button class="action-button view-button" (click)="openDetailsModal(user.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+              </button>
+              <button class="action-button edit-button" (click)="openEditModal(user.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+              <button class="action-button delete-button" (click)="deleteUser(user.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#FF4C4C">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de modification -->
+<div class="edit-modal-overlay" *ngIf="showEditModal" (click)="closeEditModal($event)">
+  <div class="edit-modal-container" (click)="$event.stopPropagation()">
+    <form [formGroup]="editForm" (ngSubmit)="onSubmitEdit()" class="edit-form">
+      <h2 class="title">Modifier l'utilisateur</h2>
+      
+      <!-- Nom -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="nom"
+            id="nom"
+            placeholder=" "
+          />
+          <label for="nom">Nom</label>
+        </div>
+        <small *ngIf="editForm.get('nom')?.errors?.['required'] && editForm.get('nom')?.touched">
+          Le nom est requis.
+        </small>
+      </div>
+      
+      <!-- Email -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+          <input
+            type="email"
+            formControlName="email"
+            id="email"
+            placeholder=" "
+          />
+          <label for="email">Email</label>
+        </div>
+        <small *ngIf="editForm.get('email')?.errors?.['required'] && editForm.get('email')?.touched">
+          L'email est requis.
+        </small>
+        <small *ngIf="editForm.get('email')?.errors?.['email'] && editForm.get('email')?.touched">
+          L'email n'est pas valide.
+        </small>
+      </div>
+      
+      <!-- Rôle -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          </svg>
+          <select
+            formControlName="role"
+            id="role"
+            placeholder=" "
+            class="role-select"
+          >
+            <option value="DEVELOPPEUR">Développeur</option>
+            <option value="MANAGER">Manager</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+          <label for="role">Rôle</label>
+        </div>
+      </div>
+      
+      <!-- Compétences -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M22 11.08V12c-.1 4.5-3.7 8.12-8.2 8.5-.46.04-.93.06-1.39.06-3.8 0-7.12-2.1-8.8-5.21l1.75-1c1.5 2.6 4.32 4.2 7.35 4.2.38 0 .76-.02 1.13-.06 3.65-.31 6.67-3.15 6.97-6.8.3-3.64-2.22-6.8-5.75-7.6-3.5-.8-6.96.97-8.52 4.26l-1.88-1.05 4.65-8.1h9.06L16.5 3.5h-5.36L7.66 9.89C3.38 14.13 4.86 20.73 10 23l.46.23c5.29 2.08 10.7-1.65 11.54-7.15z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="competences"
+            id="competences"
+            placeholder=" "
+          />
+          <label for="competences">Compétences</label>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <!-- Expériences -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+            <input
+              type="number"
+              formControlName="experiences"
+              id="experiences"
+              placeholder=" "
+              min="0"
+            />
+            <label for="experiences">Expériences (années)</label>
+          </div>
+        </div>
+        
+        <!-- Disponibilité -->
+        <div class="form-group half">
+          <div class="input-field checkbox-container" (click)="toggleEditDisponibilite()">
+            <label for="disponibilite" class="checkbox-label-fix">
+              <input
+                type="checkbox"
+                formControlName="disponibilite"
+                id="disponibilite"
+              />
+              <span class="checkbox-text">Disponible</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Boutons d'action -->
+      <div class="form-actions">
+        <button type="button" class="cancel-button" (click)="closeEditModal($event)">Annuler</button>
+        <button type="submit" [disabled]="editForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+    
+    <!-- Bouton fermer -->
+    <button class="close-modal-button" (click)="closeEditModal($event)">×</button>
+  </div>
+</div>
+
+<!-- Modal d'ajout d'utilisateur -->
+<div class="edit-modal-overlay" *ngIf="showAddModal" (click)="closeAddModal($event)">
+  <div class="edit-modal-container" (click)="$event.stopPropagation()">
+    <form [formGroup]="addForm" (ngSubmit)="onSubmitAdd()" class="edit-form">
+      <h2 class="title">Ajouter un utilisateur</h2>
+      
+      <!-- Nom -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="nom"
+            id="add-nom"
+            placeholder=" "
+          />
+          <label for="add-nom">Nom</label>
+        </div>
+        <small *ngIf="addForm.get('nom')?.errors?.['required'] && addForm.get('nom')?.touched">
+          Le nom est requis.
+        </small>
+      </div>
+      
+      <!-- Email -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+          <input
+            type="email"
+            formControlName="email"
+            id="add-email"
+            placeholder=" "
+          />
+          <label for="add-email">Email</label>
+        </div>
+        <small *ngIf="addForm.get('email')?.errors?.['required'] && addForm.get('email')?.touched">
+          L'email est requis.
+        </small>
+        <small *ngIf="addForm.get('email')?.errors?.['email'] && addForm.get('email')?.touched">
+          L'email n'est pas valide.
+        </small>
+      </div>
+      
+      <!-- Mot de passe -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.11-.89-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"/>
+          </svg>
+          <input
+            type="password"
+            formControlName="password"
+            id="add-password"
+            placeholder=" "
+            required
+          />
+          <label for="add-password">Mot de passe*</label>
+        </div>
+        <small *ngIf="addForm.get('password')?.errors?.['required'] && addForm.get('password')?.touched">
+          Le mot de passe est requis.
+        </small>
+        <small *ngIf="addForm.get('password')?.errors?.['minlength'] && addForm.get('password')?.touched">
+          Le mot de passe doit contenir au moins 6 caractères.
+        </small>
+      </div>
+      
+      <!-- Rôle -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          </svg>
+          <select
+            formControlName="role"
+            id="add-role"
+            placeholder=" "
+            class="role-select"
+          >
+            <option value="DEVELOPPEUR">Développeur</option>
+            <option value="MANAGER">Manager</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+          <label for="add-role">Rôle</label>
+        </div>
+      </div>
+      
+      <!-- Compétences -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M22 11.08V12c-.1 4.5-3.7 8.12-8.2 8.5-.46.04-.93.06-1.39.06-3.8 0-7.12-2.1-8.8-5.21l1.75-1c1.5 2.6 4.32 4.2 7.35 4.2.38 0 .76-.02 1.13-.06 3.65-.31 6.67-3.15 6.97-6.8.3-3.64-2.22-6.8-5.75-7.6-3.5-.8-6.96.97-8.52 4.26l-1.88-1.05 4.65-8.1h9.06L16.5 3.5h-5.36L7.66 9.89C3.38 14.13 4.86 20.73 10 23l.46.23c5.29 2.08 10.7-1.65 11.54-7.15z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="competences"
+            id="add-competences"
+            placeholder=" "
+          />
+          <label for="add-competences">Compétences</label>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <!-- Expériences -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+            <input
+              type="number"
+              formControlName="experiences"
+              id="add-experiences"
+              placeholder=" "
+              min="0"
+            />
+            <label for="add-experiences">Expériences (années)</label>
+          </div>
+        </div>
+        
+        <!-- Disponibilité -->
+        <div class="form-group half">
+          <div class="input-field checkbox-container" (click)="toggleAddDisponibilite()">
+            <label for="add-disponibilite" class="checkbox-label-fix">
+              <input
+                type="checkbox"
+                formControlName="disponibilite"
+                id="add-disponibilite"
+              />
+              <span class="checkbox-text">Disponible</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Boutons d'action -->
+      <div class="form-actions">
+        <button type="button" class="cancel-button" (click)="closeAddModal($event)">Annuler</button>
+        <button type="submit" [disabled]="addForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Création...' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+    
+    <!-- Bouton fermer -->
+    <button class="close-modal-button" (click)="closeAddModal($event)">×</button>
+  </div>
+</div>
+
+<!-- Modal de détails de l'utilisateur (style du navbar) -->
+<div class="profile-modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal($event)">
+  <div class="profile-modal" (click)="$event.stopPropagation()">
+    <!-- Header orange et bouton fermer -->
+    <div class="profile-modal-header">
+      <button class="close-button" (click)="closeDetailsModal($event)">×</button>
+    </div>
+    
+    <!-- Contenu du profil -->
+    <div class="profile-modal-content" *ngIf="selectedUser">
+      <!-- Photo de profil -->
+      <div class="profile-photo-container">
+        <img [src]="getUserPhotoUrl(selectedUser.photo)" 
+             alt="Photo de profil" class="profile-photo">
+      </div>
+      
+      <!-- Nom et rôle -->
+      <h1 class="profile-name">{{ selectedUser.nom }}</h1>
+      <div class="profile-role-badge">{{ selectedUser.role }}</div>
+      
+      <!-- Informations détaillées -->
+      <div class="profile-details">
+        <div class="profile-info-row">
+          <span class="profile-label">ID:</span>
+          <span class="profile-value">{{ selectedUser.id }}</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Email:</span>
+          <span class="profile-value">{{ selectedUser.email }}</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Statut:</span>
+          <span class="profile-value">{{ selectedUser.disponibilite ? 'Actif' : 'Inactif' }}</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Expériences:</span>
+          <span class="profile-value">{{ selectedUser.experiences || 0 }} ans</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Compétences:</span>
+          <span class="profile-value">{{ selectedUser.competences || 'Non spécifiées' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

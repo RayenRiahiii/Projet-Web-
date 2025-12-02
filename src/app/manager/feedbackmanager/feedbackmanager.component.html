@@ -1,0 +1,122 @@
+<div class="feedback-container">
+  <!-- Notification messages -->
+  <div class="notification error" *ngIf="error">
+    <p>{{ error }}</p>
+    <button class="close-btn" (click)="error = null">×</button>
+  </div>
+
+  <div class="notification success" *ngIf="success">
+    <p>{{ success }}</p>
+    <button class="close-btn" (click)="success = null">×</button>
+  </div>
+
+  <!-- Header section -->
+  <div class="feedback-header">
+    <h1>Notation des développeurs</h1>
+  </div>
+
+  <!-- Main feedback card -->
+  <div class="feedback-card">
+    <!-- Project and developer selectors -->
+    <div class="selectors-row">
+      <div class="selector-group">
+        <label for="project">
+          <i class="fas fa-project-diagram"></i> Projet
+        </label>
+        <select id="project" [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectSelected()">
+          <option [ngValue]="null">-- Sélectionner un projet --</option>
+          <option *ngFor="let project of managerProjects" [ngValue]="project.id">{{ project.nom }}</option>
+        </select>
+      </div>
+
+      <div class="selector-group">
+        <label for="developer">
+          <i class="fas fa-user-code"></i> Développeur
+        </label>
+        <select id="developer" [(ngModel)]="selectedDeveloperId" (ngModelChange)="onDeveloperSelected()" [disabled]="!selectedProjectId">
+          <option [ngValue]="null">-- Sélectionner un développeur --</option>
+          <option *ngFor="let dev of projectDevelopers" [ngValue]="dev.id">{{ dev.nom }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Rating form -->
+    <div class="rating-form" *ngIf="selectedProjectId && selectedDeveloperId">
+      <!-- Rating criteria -->
+      <div class="rating-criteria">
+        <div class="criteria-group">
+          <label for="qualiteCode">Qualité du code</label>
+          <input type="number" id="qualiteCode" [(ngModel)]="feedbackForm.qualiteCode" min="1" max="5">
+        </div>
+
+        <div class="criteria-group">
+          <label for="respectDelais">Respect des délais</label>
+          <input type="number" id="respectDelais" [(ngModel)]="feedbackForm.respectDelais" min="1" max="5">
+        </div>
+
+        <div class="criteria-group">
+          <label for="travailEquipe">Travail en équipe</label>
+          <input type="number" id="travailEquipe" [(ngModel)]="feedbackForm.travailEquipe" min="1" max="5">
+        </div>
+
+        <div class="criteria-group">
+          <label for="autonomie">Autonomie</label>
+          <input type="number" id="autonomie" [(ngModel)]="feedbackForm.autonomie" min="1" max="5">
+        </div>
+      </div>
+
+      <!-- Comment section -->
+      <div class="comment-section">
+        <label for="commentaire">Commentaire (facultatif)</label>
+        <textarea id="commentaire" [(ngModel)]="feedbackForm.commentaire" rows="5" placeholder="Ajouter un commentaire constructif..."></textarea>
+      </div>
+
+      <!-- Form actions -->
+      <div class="form-actions">
+        <button class="submit-btn" (click)="submitFeedback()">
+          {{ developerAlreadyRated ? 'Mettre à jour' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ratings table -->
+  <div class="ratings-table-section" *ngIf="selectedProjectId && projectFeedbacks && projectFeedbacks.length > 0">
+    <h2>Notes des développeurs pour ce projet</h2>
+    <div class="table-container">
+      <table class="ratings-table">
+        <thead>
+          <tr>
+            <th>Développeur</th>
+            <th>Qualité</th>
+            <th>Délais</th>
+            <th>Équipe</th>
+            <th>Autonomie</th>
+            <th>Score /10</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let feedback of projectFeedbacks">
+            <td>{{ getDeveloperNameById(feedback?.developer?.id) }}</td>
+            <td>{{ feedback?.qualiteCode || 'N/A' }}</td>
+            <td>{{ feedback?.respectDelais || 'N/A' }}</td>
+            <td>{{ feedback?.travailEquipe || 'N/A' }}</td>
+            <td>{{ feedback?.autonomie || 'N/A' }}</td>
+            <td class="score-column">{{ getScoreDisplay(feedback?.score10) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty state message -->
+  <div class="empty-state" *ngIf="selectedProjectId && (!projectFeedbacks || projectFeedbacks.length === 0)">
+    <p>Aucune notation n'a encore été enregistrée pour ce projet.</p>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading-spinner" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+</div>

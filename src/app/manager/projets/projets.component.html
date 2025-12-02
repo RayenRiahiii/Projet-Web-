@@ -1,0 +1,307 @@
+<div class="projects-container">
+  <div class="floating-container">
+    <div class="search-section">
+      <!-- Zone de recherche modifiée avec icône cliquable -->
+      <div class="group">
+        <svg class="icon" (click)="toggleSearchCriteria()" aria-hidden="true" viewBox="0 0 24 24"><g><path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"></path></g></svg>
+        <input placeholder="Recherche" type="search" class="input" [(ngModel)]="searchTerm" (input)="searchProjects()">
+      </div>
+
+      <!-- Liste simple de critères de recherche -->
+      <div class="search-criteria-buttons" *ngIf="showSearchCriteria">
+        <button class="criteria-button" (click)="filterByStatus('EN_COURS')">En cours</button>
+        <button class="criteria-button" (click)="filterByStatus('TERMINE')">Terminés</button>
+        <button class="criteria-button" (click)="filterByStatus('EN_ATTENTE')">En attente</button>
+        <button class="criteria-button" (click)="filterByDate('recent')">Récents</button>
+        <button class="criteria-button" (click)="filterByDate('upcoming')">À venir</button>
+        <button class="criteria-button reset" (click)="resetFilters()">Tout afficher</button>
+      </div>
+    </div>
+
+    <div class="projects-table-container">
+      <table class="projects-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Date de début</th>
+            <th>Date de fin</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let project of filteredProjects">
+            <td>{{ project.id }}</td>
+            <td>{{ project.nom }}</td>
+            <td>{{ project.dateDebut | date:'yyyy-MM-dd' }}</td>
+            <td>{{ project.dateFinPrevue | date:'yyyy-MM-dd' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(project.statut)">
+                {{ project.statut }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <button class="action-button view-button" (click)="openDetailsModal(project.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+              </button>
+              <button class="action-button edit-button" (click)="openEditModal(project.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de modification -->
+<div class="edit-modal-overlay" *ngIf="showEditModal" (click)="closeEditModal($event)">
+  <div class="edit-modal-container" (click)="$event.stopPropagation()">
+    <form [formGroup]="editForm" (ngSubmit)="onSubmitEdit()" class="edit-form">
+      <h2 class="title">Modifier le projet</h2>
+      
+      <!-- Nom du projet -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+            <path d="M14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="nom"
+            id="nom"
+            placeholder=" "
+          />
+          <label for="nom">Nom du projet</label>
+        </div>
+        <small *ngIf="editForm.get('nom')?.errors?.['required'] && editForm.get('nom')?.touched">
+          Le nom est requis.
+        </small>
+      </div>
+      
+      <!-- Description -->
+      <div class="form-group">
+        <div class="input-field textarea-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M21 11.01L3 11v2h18zM3 16h12v2H3zM21 6H3v2.01L21 8z"/>
+          </svg>
+          <textarea
+            formControlName="description"
+            id="description"
+            placeholder=" "
+            rows="3"
+            spellcheck="false"
+            autocomplete="off"
+          ></textarea>
+          <label for="description">Description</label>
+        </div>
+      </div>
+      
+      <!-- Rangée de 2 champs -->
+      <div class="form-row">
+        <!-- Date de début -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateDebut"
+              id="dateDebut"
+              placeholder=" "
+            />
+            <label for="dateDebut">Date début</label>
+          </div>
+        </div>
+        
+        <!-- Date de fin prévue -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+              <path d="M12 14l-3 3 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateFinPrevue"
+              id="dateFinPrevue"
+              placeholder=" "
+            />
+            <label for="dateFinPrevue">Date fin prévue</label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Statut -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4-8c0 2.21-1.79 4-4 4s-4-1.79-4-4 1.79-4 4-4 4 1.79 4 4z"/>
+          </svg>
+          <select
+            formControlName="statut"
+            id="statut"
+            placeholder=" "
+            class="status-select"
+          >
+            <option value="EN_COURS">En cours</option>
+            <option value="TERMINE">Terminé</option>
+            <option value="EN_ATTENTE">En attente</option>
+          </select>
+          <label for="statut">Statut</label>
+        </div>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Boutons d'action -->
+      <div class="form-actions">
+        <button type="button" class="cancel-button" (click)="closeEditModal($event)">Annuler</button>
+        <button type="submit" [disabled]="editForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+    
+    <!-- Bouton fermer -->
+    <button class="close-modal-button" (click)="closeEditModal($event)">×</button>
+  </div>
+</div>
+
+<!-- Modal de détails du projet -->
+<div class="details-modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal($event)">
+  <div class="details-modal-container" (click)="$event.stopPropagation()">
+    
+    <!-- En-tête avec informations principales -->
+    <div class="details-header" *ngIf="currentProject">
+      <h2 class="project-title">{{ currentProject.nom }}</h2>
+      <span class="status-badge large" [ngClass]="getStatusClass(currentProject.statut)">
+        {{ currentProject.statut }}
+      </span>
+    </div>
+    
+    <!-- Informations du projet -->
+    <div class="project-info" *ngIf="currentProject">
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#0056b3">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Date de début</h4>
+            <p>{{ currentProject.dateDebut | date:'dd MMM yyyy' }}</p>
+          </div>
+        </div>
+        
+        <div class="info-card">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#FFA500">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+              <path d="M12 14l-3 3 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Date de fin prévue</h4>
+            <p>{{ currentProject.dateFinPrevue | date:'dd MMM yyyy' }}</p>
+          </div>
+        </div>
+
+        <div class="info-card" *ngIf="currentProject.manager">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#00875a">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Chef de projet</h4>
+            <p>{{ currentProject.manager?.nom }}</p>
+          </div>
+        </div>
+
+        <div class="info-card" *ngIf="currentProject.type">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#6200ee">
+              <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Type</h4>
+            <p>{{ currentProject.type }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Description du projet -->
+      <div class="description-card" *ngIf="currentProject.description">
+        <h3>Description</h3>
+        <p>{{ currentProject.description }}</p>
+      </div>
+    </div>
+
+    <!-- Liste des tâches -->
+    <div class="tasks-section">
+      <div class="section-header">
+        <h3>Tâches du projet</h3>
+        <div class="tasks-count">
+          <span class="badge">{{ projectTasks.length }}</span>
+        </div>
+      </div>
+      
+      <!-- Indicateur de chargement -->
+      <div class="loading-indicator" *ngIf="loadingTasks">
+        <div class="spinner"></div>
+        <p>Chargement des tâches...</p>
+      </div>
+      
+      <!-- Liste des tâches -->
+      <div class="tasks-list" *ngIf="!loadingTasks">
+        <div class="task-item" *ngFor="let task of projectTasks">
+          <div class="task-status" [ngClass]="'task-status-' + task.statut.toLowerCase()"></div>
+          <div class="task-content">
+            <div class="task-header">
+              <h4>{{ task.nom }}</h4>
+              <span class="task-badge" [ngClass]="'priority-' + task.priorite.toLowerCase()">{{ task.priorite }}</span>
+            </div>
+            <p class="task-description" *ngIf="task.description">{{ task.description }}</p>
+            <div class="task-footer">
+              <div class="task-assignee" *ngIf="task.responsable">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span>{{ task.responsable.nom }}</span>
+              </div>
+              <div class="task-dates" *ngIf="task.dateLimite">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7z"/>
+                </svg>
+                <span>{{ task.dateLimite | date:'dd MMM' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Message si pas de tâches -->
+        <div class="no-tasks" *ngIf="projectTasks.length === 0">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="#ccc">
+            <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+          <p>Aucune tâche n'est associée à ce projet</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bouton de fermeture -->
+    <button class="close-modal-button" (click)="closeDetailsModal($event)">×</button>
+  </div>
+</div>

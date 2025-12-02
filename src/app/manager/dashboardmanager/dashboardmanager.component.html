@@ -1,0 +1,146 @@
+<div class="dashboard" *ngIf="!loading; else loadingTpl">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Espace manager</p>
+      <h1>Pilotage des projets</h1>
+      <p class="muted">Suivi des avancements, risques et reunions.</p>
+    </div>
+    <div class="hero-actions">
+      <a routerLink="/manager/projets" class="ghost">Voir les projets</a>
+      <a routerLink="/manager/planning" class="primary">Programmer</a>
+    </div>
+  </div>
+
+  <div class="grid stats">
+    <div class="stat-card">
+      <p class="label">Projets</p>
+      <h3>{{ stats.projects }}</h3>
+      <p class="muted small">Risques: {{ stats.riskProjects }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="label">Taches</p>
+      <h3>{{ stats.tasks }}</h3>
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="(stats.tasksDone / (stats.tasks || 1)) * 100"></div>
+      </div>
+      <p class="muted small">{{ stats.tasksDone }} terminees</p>
+    </div>
+    <div class="stat-card">
+      <p class="label">Reunions aujourd hui</p>
+      <h3>{{ stats.meetingsToday }}</h3>
+    </div>
+    <div class="stat-card highlight">
+      <p class="label">Rapports envoyes</p>
+      <h3>{{ reports.length }}</h3>
+      <p class="muted small">En attente de lecture</p>
+    </div>
+  </div>
+
+  <div class="grid two-col">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Mes projets</p>
+          <h2>Progression</h2>
+        </div>
+        <a routerLink="/manager/projets" class="text-link">Tous les projets</a>
+      </div>
+      <div class="project-row" *ngFor="let project of projects; trackBy: trackById">
+        <div>
+          <p class="project-name">{{ project.nom }}</p>
+          <p class="muted small">{{ project.description || 'Pas de description' }}</p>
+          <div class="tags">
+            <span class="pill soft">{{ project.statut }}</span>
+            <span class="pill muted-chip">Type {{ project.type }}</span>
+          </div>
+        </div>
+        <div class="progress mini">
+          <div class="progress-bar" [style.width.%]="project.pourcentageAvancement || 0"></div>
+        </div>
+      </div>
+      <div class="empty" *ngIf="projects.length === 0">
+        <p class="muted">Aucun projet pour le moment</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Agenda</p>
+          <h2>Reunions a venir</h2>
+        </div>
+        <a routerLink="/manager/meetings" class="text-link">Planifier</a>
+      </div>
+      <div class="meeting" *ngFor="let meeting of upcomingMeetings; trackBy: trackById">
+        <div>
+          <p class="name">{{ meeting.sujet }}</p>
+          <p class="muted small">{{ meeting.description || 'Suivi' }}</p>
+        </div>
+        <div class="date">
+          <span>{{ meeting.dateHeure | date:'dd MMM' }}</span>
+          <small>{{ meeting.dateHeure | date:'HH:mm' }}</small>
+        </div>
+      </div>
+      <div class="empty" *ngIf="upcomingMeetings.length === 0">
+        <p class="muted">Pas de reunion programmee</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid two-col">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Taches</p>
+          <h2>Priorite haute</h2>
+        </div>
+        <a routerLink="/manager/projets" class="text-link">Affecter</a>
+      </div>
+      <div class="task" *ngFor="let task of criticalTasks; trackBy: trackById">
+        <div>
+          <p class="name">{{ task.nom }}</p>
+          <p class="muted small">{{ task.projet?.nom || 'Projet' }}</p>
+          <div class="tags">
+            <span class="pill soft">{{ task.statut }}</span>
+            <span class="pill muted-chip">{{ task.priorite }}</span>
+          </div>
+        </div>
+        <div class="progress mini">
+          <div class="progress-bar" [style.width.%]="completion(task)"></div>
+        </div>
+      </div>
+      <div class="empty" *ngIf="criticalTasks.length === 0">
+        <p class="muted">Pas de tache prioritaire</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Rapports</p>
+          <h2>Suivi des envois</h2>
+        </div>
+        <a routerLink="/manager/rapport" class="text-link">Ouvrir</a>
+      </div>
+      <div class="reports">
+        <div class="report-card" *ngFor="let report of reports; trackBy: trackById">
+          <div>
+            <p class="name">{{ report.fileName }}</p>
+            <p class="muted small">Projet {{ report.project?.nom || 'N/A' }}</p>
+          </div>
+          <span class="pill soft">{{ report.status || 'Envoye' }}</span>
+        </div>
+        <div class="empty" *ngIf="reports.length === 0">
+          <p class="muted">Aucun rapport envoye</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loader">
+    <div class="spinner"></div>
+    <p>Chargement du tableau de bord manager...</p>
+  </div>
+</ng-template>

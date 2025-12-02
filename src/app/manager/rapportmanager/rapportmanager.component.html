@@ -1,0 +1,296 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<div class="rapport-container" [class.loading]="loading">
+  <!-- Message d'erreur global -->
+  <div class="error-message" *ngIf="error">
+    <p>{{ error }}</p>
+    <button class="error-close" (click)="error = null">×</button>
+  </div>
+
+  <!-- En-tête avec 2 panneaux: chargement et aperçu -->
+  <div class="header-panels">
+    <!-- Panneau gauche: Types de rapports / Chargement -->
+    <div class="panel type-panel">
+      <div class="panel-header">
+        <h2>Types de Rapports</h2>
+        <button class="add-button" (click)="openUploadModal()">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+      <div class="panel-content">
+        <div class="upload-option" (click)="openUploadModal()">
+          <div class="upload-icon">
+            <i class="fas fa-file-upload"></i>
+          </div>
+          <p>Charger un rapport</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau droit: Aperçu du rapport -->
+    <div class="panel preview-panel">
+      <div class="panel-header">
+        <h2>Aperçu du Rapport</h2>
+      </div>
+      <div class="panel-content">
+        <div *ngIf="selectedReport" class="report-preview">
+          <div class="preview-header">
+            <h3>{{ selectedReport.fileName }}</h3>
+            
+          </div>
+          <div class="report-iframe-container">
+            <iframe [src]="safeReportUrl" class="report-iframe" *ngIf="safeReportUrl"></iframe>
+          </div>
+        </div>
+        <div *ngIf="!selectedReport" class="no-preview">
+          <div class="no-preview-content">
+            <i class="fas fa-file-alt"></i>
+            <p>Sélectionnez un rapport pour afficher un aperçu</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reports-container">
+    <!-- Section des rapports envoyés -->
+    <div class="recent-reports">
+      <div class="section-header">
+        <h2>Rapports Envoyés</h2>
+        <div class="search-bar">
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm"
+            (input)="searchReports('sent')"
+            placeholder="Rechercher par nom de rapport..." 
+            class="search-input"
+          />
+          <i class="fas fa-search search-icon"></i>
+        </div>
+      </div>
+
+      <!-- Tableau des rapports envoyés -->
+      <div class="reports-table-container">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>NOM DU RAPPORT</th>
+              <th>PROJET</th>
+              <th>AUTEUR</th>
+              <th>DATE DE GÉNÉRATION</th>
+              <th>FORMAT</th>
+              <th>STATUT</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let report of getCurrentPageItems('sent')" 
+                [class.active]="selectedReport?.id === report.id"
+                (click)="selectReport(report)">
+              <td class="report-name">{{ report.fileName }}</td>
+              <td>{{ report.project?.nom || 'Non spécifié' }}</td>
+              <td>{{ report.sender?.nom || 'Vous' }}</td>
+              <td>{{ formatDate(report.uploadDate) }}</td>
+              <td>
+                <span class="format-badge" [ngClass]="report.format.toLowerCase()">{{ report.format }}</span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="report.status?.toLowerCase()">{{ report.status || 'En attente' }}</span>
+              </td>
+              <td class="actions-cell">
+                <div class="actions">
+                  <button class="action-btn view" (click)="downloadReport(report); $event.stopPropagation()" title="Consulter">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="action-btn send" (click)="openSendModal(report); $event.stopPropagation()" title="Envoyer">
+                    <i class="fas fa-paper-plane"></i>
+                  </button>
+                  <button class="action-btn delete" (click)="deleteReport(report.id); $event.stopPropagation()" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredSentReports.length === 0">
+              <td colspan="7" class="no-data">Aucun rapport trouvé</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination des rapports envoyés -->
+      <div class="pagination" *ngIf="totalSentPages > 1">
+        <button class="page-btn prev" [disabled]="currentSentPage === 1" (click)="goToPage(currentSentPage - 1, 'sent')">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <div class="page-numbers">
+          <button *ngFor="let page of getPages('sent')" 
+                  class="page-number" 
+                  [class.active]="page === currentSentPage"
+                  (click)="goToPage(page, 'sent')">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button class="page-btn next" [disabled]="currentSentPage === totalSentPages" (click)="goToPage(currentSentPage + 1, 'sent')">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Section des rapports reçus -->
+    <div class="recent-reports">
+      <div class="section-header">
+        <h2>Rapports Reçus</h2>
+        <div class="search-bar">
+          <input 
+            type="text" 
+            [(ngModel)]="receivedSearchTerm"
+            (input)="searchReports('received')"
+            placeholder="Rechercher par nom de rapport..." 
+            class="search-input"
+          />
+          <i class="fas fa-search search-icon"></i>
+        </div>
+      </div>
+
+      <!-- Tableau des rapports reçus -->
+      <div class="reports-table-container">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>NOM DU RAPPORT</th>
+              <th>PROJET</th>
+              <th>ENVOYÉ PAR</th>
+              <th>DATE DE RÉCEPTION</th>
+              <th>FORMAT</th>
+              <th>STATUT</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let report of getCurrentPageItems('received')" 
+                [class.active]="selectedReport?.id === report.id"
+                (click)="selectReport(report)">
+              <td class="report-name">{{ report.fileName }}</td>
+              <td>{{ report.project?.nom || 'Non spécifié' }}</td>
+              <td>{{ report.sender?.nom || 'Non spécifié' }}</td>
+              <td>{{ formatDate(report.uploadDate) }}</td>
+              <td>
+                <span class="format-badge" [ngClass]="report.format.toLowerCase()">{{ report.format }}</span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="report.status?.toLowerCase()">{{ report.status || 'En attente' }}</span>
+              </td>
+              <td class="actions-cell">
+                <div class="actions">
+                  <button class="action-btn view" (click)="downloadReport(report); $event.stopPropagation()" title="Consulter">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="action-btn delete" (click)="deleteReport(report.id); $event.stopPropagation()" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredReceivedReports.length === 0">
+              <td colspan="7" class="no-data">Aucun rapport trouvé</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination des rapports reçus -->
+      <div class="pagination" *ngIf="totalReceivedPages > 1">
+        <button class="page-btn prev" [disabled]="currentReceivedPage === 1" (click)="goToPage(currentReceivedPage - 1, 'received')">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <div class="page-numbers">
+          <button *ngFor="let page of getPages('received')" 
+                  class="page-number" 
+                  [class.active]="page === currentReceivedPage"
+                  (click)="goToPage(page, 'received')">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button class="page-btn next" [disabled]="currentReceivedPage === totalReceivedPages" (click)="goToPage(currentReceivedPage + 1, 'received')">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay pour les modaux -->
+  <div class="modal-overlay" *ngIf="showUploadModal || showSendModal"></div>
+
+  <!-- Modal de chargement de rapport -->
+  <div class="modal upload-modal" *ngIf="showUploadModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Charger un nouveau rapport</h3>
+        <button class="close-btn" (click)="closeUploadModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="file">Sélectionner un fichier</label>
+          <div class="file-input-container">
+            <input type="file" id="file" class="file-input" (change)="onFileSelected($event)" />
+            <div class="file-input-label">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <span>{{ fileToUpload ? fileToUpload.name : 'Choisir un fichier' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="project">Projet</label>
+          <select id="project" [(ngModel)]="uploadProjectId">
+            <option [ngValue]="null">-- Sélectionner un projet --</option>
+            <option *ngFor="let project of managerProjects" [ngValue]="project.id">{{ project.nom }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn" (click)="closeUploadModal()">Annuler</button>
+        <button class="submit-btn" [disabled]="!fileToUpload || !uploadProjectId" (click)="uploadReport()">
+          Charger
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'envoi de rapport -->
+  <div class="modal send-modal" *ngIf="showSendModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Envoyer le rapport</h3>
+        <button class="close-btn" (click)="closeSendModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="selected-report">
+          Rapport sélectionné: <strong>{{ selectedReport?.fileName }}</strong>
+        </p>
+        <div class="form-group">
+          <label for="admin">Sélectionner un administrateur</label>
+          <select id="admin" [(ngModel)]="selectedAdmin">
+            <option [ngValue]="null">-- Choisir un administrateur --</option>
+            <option *ngFor="let admin of admins" [ngValue]="admin.id">{{ admin.nom }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-btn" (click)="closeSendModal()">Annuler</button>
+        <button class="submit-btn" [disabled]="!selectedAdmin" (click)="sendReport()">
+          Envoyer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-spinner" *ngIf="loading">
+    <div class="spinner"></div>
+  </div>
+</div>

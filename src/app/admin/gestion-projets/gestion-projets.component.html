@@ -1,0 +1,482 @@
+<div class="projects-container">
+  <!-- Message de succès -->
+  <div class="success-message" *ngIf="successMsg">
+    <svg viewBox="0 0 24 24" width="20" height="20" class="success-icon">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+    </svg>
+    {{ successMsg }}
+    <button class="close-message" (click)="successMsg = undefined">×</button>
+  </div>
+  
+  <div class="floating-container">
+    <div class="search-section">
+      <!-- Zone de recherche avec icône cliquable -->
+      <div class="group">
+        <svg class="icon" (click)="toggleSearchCriteria()" aria-hidden="true" viewBox="0 0 24 24"><g><path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"></path></g></svg>
+        <input placeholder="Recherche" type="search" class="input" [(ngModel)]="searchTerm" (input)="searchProjects()">
+      </div>
+
+      <!-- Liste de critères de recherche -->
+      <div class="search-criteria-buttons" *ngIf="showSearchCriteria">
+        <button class="criteria-button" (click)="filterByType('SIMPLE')">Simple</button>
+        <button class="criteria-button" (click)="filterByType('INTERMEDIAIRE')">Intermédiaire</button>
+        <button class="criteria-button" (click)="filterByType('COMPLEXE')">Complexe</button>
+        <button class="criteria-button" (click)="filterByStatus('EN_COURS')">En cours</button>
+        <button class="criteria-button" (click)="filterByStatus('TERMINE')">Terminés</button>
+        <button class="criteria-button" (click)="filterByStatus('EN_ATTENTE')">En attente</button>
+        <button class="criteria-button reset" (click)="resetFilters()">Tout afficher</button>
+      </div>
+
+      <!-- Bouton ajouter -->
+      <button class="add-button" (click)="openAddModal()">Ajouter</button>
+    </div>
+
+    <div class="projects-table-container">
+      <table class="projects-table">
+        <thead>
+          <tr>
+            <th>Nom du projet</th>
+            <th>Type</th>
+            <th>Manager</th>
+            <th>Statut</th>
+            <th>Date de fin prévue</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let project of filteredProjects">
+            <td>{{ project.nom }}</td>
+            <td>{{ project.type }}</td>
+            <td>{{ project.manager?.nom || 'Non assigné' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(project.statut)">
+                {{ project.statut === 'EN_COURS' ? 'EN COURS' : 
+                   project.statut === 'TERMINE' ? 'TERMINÉ' : 'EN ATTENTE' }}
+              </span>
+            </td>
+            <td>{{ project.dateFinPrevue | date:'yyyy-MM-dd' }}</td>
+            <td class="actions-cell">
+              <button class="action-button view-button" (click)="openDetailsModal(project.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+              </button>
+              <button class="action-button edit-button" (click)="openEditModal(project.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+              <button class="action-button delete-button" (click)="deleteProject(project.id)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#FF4C4C">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal d'éditeur -->
+<div class="edit-modal-overlay" *ngIf="showEditModal" (click)="closeEditModal($event)">
+  <div class="edit-modal-container" (click)="$event.stopPropagation()">
+    <form [formGroup]="editForm" (ngSubmit)="onSubmitEdit()" class="edit-form">
+      <h2 class="title">Modifier le projet</h2>
+      
+      <!-- Nom du projet -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+            <path d="M14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="nom"
+            id="nom"
+            placeholder=" "
+          />
+          <label for="nom">Nom du projet</label>
+        </div>
+        <small *ngIf="editForm.get('nom')?.errors?.['required'] && editForm.get('nom')?.touched">
+          Le nom est requis.
+        </small>
+      </div>
+      
+      <!-- Description -->
+      <div class="form-group">
+        <div class="input-field textarea-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M21 11.01L3 11v2h18zM3 16h12v2H3zM21 6H3v2.01L21 8z"/>
+          </svg>
+          <textarea
+            formControlName="description"
+            id="description"
+            placeholder=" "
+            rows="3"
+            spellcheck="false"
+            autocomplete="off"
+          ></textarea>
+          <label for="description">Description</label>
+        </div>
+      </div>
+      
+      <!-- Type de projet -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2V9h-2V7h4v10z"/>
+          </svg>
+          <select
+            formControlName="type"
+            id="type"
+            placeholder=" "
+            class="status-select"
+          >
+            <option value="SIMPLE">Simple</option>
+            <option value="INTERMEDIAIRE">Intermédiaire</option>
+            <option value="COMPLEXE">Complexe</option>
+          </select>
+          <label for="type">Type de projet</label>
+        </div>
+      </div>
+      
+      <!-- Manager -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <select
+            formControlName="managerId"
+            id="managerId"
+            placeholder=" "
+            class="status-select"
+          >
+            <option [ngValue]="null" disabled>Sélectionnez un manager</option>
+            <option *ngFor="let manager of managers" [ngValue]="manager.id">{{ manager.nom }}</option>
+          </select>
+          <label for="managerId">Manager</label>
+        </div>
+        <small *ngIf="editForm.get('managerId')?.errors?.['required'] && editForm.get('managerId')?.touched">
+          Un manager est requis.
+        </small>
+      </div>
+      
+      <!-- Rangée de 2 champs -->
+      <div class="form-row">
+        <!-- Date de début -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateDebut"
+              id="dateDebut"
+              placeholder=" "
+            />
+            <label for="dateDebut">Date début</label>
+          </div>
+        </div>
+        
+        <!-- Date de fin prévue -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+              <path d="M12 14l-3 3 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateFinPrevue"
+              id="dateFinPrevue"
+              placeholder=" "
+            />
+            <label for="dateFinPrevue">Date fin prévue</label>
+          </div>
+          <small *ngIf="editForm.get('dateFinPrevue')?.errors?.['required'] && editForm.get('dateFinPrevue')?.touched">
+            La date de fin prévue est requise.
+          </small>
+        </div>
+      </div>
+      
+      <!-- Statut -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4-8c0 2.21-1.79 4-4 4s-4-1.79-4-4 1.79-4 4-4 4 1.79 4 4z"/>
+          </svg>
+          <select
+            formControlName="statut"
+            id="statut"
+            placeholder=" "
+            class="status-select"
+          >
+            <option value="EN_COURS">En cours</option>
+            <option value="TERMINE">Terminé</option>
+            <option value="EN_ATTENTE">En attente</option>
+          </select>
+          <label for="statut">Statut</label>
+        </div>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Boutons d'action -->
+      <div class="form-actions">
+        <button type="button" class="cancel-button" (click)="closeEditModal($event)">Annuler</button>
+        <button type="submit" [disabled]="editForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+    
+    <!-- Bouton fermer -->
+    <button class="close-modal-button" (click)="closeEditModal($event)">×</button>
+  </div>
+</div>
+
+<!-- Modal d'ajout -->
+<div class="edit-modal-overlay" *ngIf="showAddModal" (click)="closeAddModal($event)">
+  <div class="edit-modal-container" (click)="$event.stopPropagation()">
+    <form [formGroup]="addForm" (ngSubmit)="onSubmitAdd()" class="edit-form">
+      <h2 class="title">Ajouter un projet</h2>
+      
+      <!-- Nom du projet -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+            <path d="M14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+          <input
+            type="text"
+            formControlName="nom"
+            id="add-nom"
+            placeholder=" "
+          />
+          <label for="add-nom">Nom du projet</label>
+        </div>
+        <small *ngIf="addForm.get('nom')?.errors?.['required'] && addForm.get('nom')?.touched">
+          Le nom est requis.
+        </small>
+      </div>
+      
+      <!-- Description -->
+      <div class="form-group">
+        <div class="input-field textarea-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M21 11.01L3 11v2h18zM3 16h12v2H3zM21 6H3v2.01L21 8z"/>
+          </svg>
+          <textarea
+            formControlName="description"
+            id="add-description"
+            placeholder=" "
+            rows="3"
+            spellcheck="false"
+            autocomplete="off"
+          ></textarea>
+          <label for="add-description">Description</label>
+        </div>
+      </div>
+      
+      <!-- Type de projet -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2V9h-2V7h4v10z"/>
+          </svg>
+          <select
+            formControlName="type"
+            id="add-type"
+            placeholder=" "
+            class="status-select"
+          >
+            <option value="SIMPLE">Simple</option>
+            <option value="INTERMEDIAIRE">Intermédiaire</option>
+            <option value="COMPLEXE">Complexe</option>
+          </select>
+          <label for="add-type">Type de projet</label>
+        </div>
+      </div>
+      
+      <!-- Manager -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <select
+            formControlName="managerId"
+            id="add-managerId"
+            placeholder=" "
+            class="status-select"
+          >
+            <option [ngValue]="null" disabled>Sélectionnez un manager</option>
+            <option *ngFor="let manager of managers" [ngValue]="manager.id">{{ manager.nom }}</option>
+          </select>
+          <label for="add-managerId">Manager</label>
+        </div>
+        <small *ngIf="addForm.get('managerId')?.errors?.['required'] && addForm.get('managerId')?.touched">
+          Un manager est requis.
+        </small>
+      </div>
+      
+      <!-- Rangée de 2 champs -->
+      <div class="form-row">
+        <!-- Date de début -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateDebut"
+              id="add-dateDebut"
+              placeholder=" "
+            />
+            <label for="add-dateDebut">Date début</label>
+          </div>
+        </div>
+        
+        <!-- Date de fin prévue -->
+        <div class="form-group half">
+          <div class="input-field">
+            <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+              <path d="M12 14l-3 3 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/>
+            </svg>
+            <input
+              type="date"
+              formControlName="dateFinPrevue"
+              id="add-dateFinPrevue"
+              placeholder=" "
+            />
+            <label for="add-dateFinPrevue">Date fin prévue</label>
+          </div>
+          <small *ngIf="addForm.get('dateFinPrevue')?.errors?.['required'] && addForm.get('dateFinPrevue')?.touched">
+            La date de fin prévue est requise.
+          </small>
+        </div>
+      </div>
+      
+      <!-- Statut -->
+      <div class="form-group">
+        <div class="input-field">
+          <svg class="input-icon" viewBox="0 0 24 24" width="18" height="18" fill="#888">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4-8c0 2.21-1.79 4-4 4s-4-1.79-4-4 1.79-4 4-4 4 1.79 4 4z"/>
+          </svg>
+          <select
+            formControlName="statut"
+            id="add-statut"
+            placeholder=" "
+            class="status-select"
+          >
+            <option value="EN_COURS">En cours</option>
+            <option value="TERMINE">Terminé</option>
+            <option value="EN_ATTENTE">En attente</option>
+          </select>
+          <label for="add-statut">Statut</label>
+        </div>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <p class="error" *ngIf="errorMsg">{{ errorMsg }}</p>
+      
+      <!-- Boutons d'action -->
+      <div class="form-actions">
+        <button type="button" class="cancel-button" (click)="closeAddModal($event)">Annuler</button>
+        <button type="submit" [disabled]="addForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'Création...' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+    
+    <!-- Bouton fermer -->
+    <button class="close-modal-button" (click)="closeAddModal($event)">×</button>
+  </div>
+</div>
+
+<!-- Modal de détails du projet -->
+<div class="details-modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal($event)">
+  <div class="details-modal-container" (click)="$event.stopPropagation()">
+    
+    <!-- En-tête avec informations principales -->
+    <div class="details-header" *ngIf="selectedProject">
+      <h2 class="project-title">{{ selectedProject.nom }}</h2>
+      <span class="status-badge large" [ngClass]="getStatusClass(selectedProject.statut)">
+        {{ selectedProject.statut === 'EN_COURS' ? 'EN COURS' : 
+           selectedProject.statut === 'TERMINE' ? 'TERMINÉ' : 'EN ATTENTE' }}
+      </span>
+    </div>
+    
+    <!-- Informations du projet -->
+    <div class="project-info" *ngIf="selectedProject">
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#0056b3">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Date de début</h4>
+            <p>{{ selectedProject.dateDebut | date:'dd MMM yyyy' }}</p>
+          </div>
+        </div>
+        
+        <div class="info-card">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#FFA500">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+              <path d="M12 14l-3 3 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Date de fin prévue</h4>
+            <p>{{ selectedProject.dateFinPrevue | date:'dd MMM yyyy' }}</p>
+          </div>
+        </div>
+
+        <div class="info-card" *ngIf="selectedProject.manager">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#00875a">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Chef de projet</h4>
+            <p>{{ selectedProject.manager?.nom }}</p>
+          </div>
+        </div>
+
+        <div class="info-card" *ngIf="selectedProject.type">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="#6200ee">
+              <path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/>
+            </svg>
+          </div>
+          <div class="info-content">
+            <h4>Type</h4>
+            <p>{{ selectedProject.type }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Description du projet -->
+      <div class="description-card" *ngIf="selectedProject.description">
+        <h3>Description</h3>
+        <p>{{ selectedProject.description }}</p>
+      </div>
+    </div>
+    
+    <!-- Bouton de fermeture -->
+    <button class="close-modal-button" (click)="closeDetailsModal($event)">×</button>
+  </div>
+</div>

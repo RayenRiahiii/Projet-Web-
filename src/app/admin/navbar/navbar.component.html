@@ -1,0 +1,187 @@
+<!-- src/app/admin/navbar/navbar.component.html -->
+<header class="navbar">
+
+  <!-- Logo -->
+  <!--<img src="assets/arabsoft.png" alt="ArabSoft" class="logo" />-->
+  <div></div>
+
+  <!-- Zone droite -->
+  <div class="right">
+
+    <!-- Bouton notifications -->
+    <button class="notif" (click)="toggle()" aria-label="Notifications">
+      <svg viewBox="0 0 24 24" class="bell">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      <span class="badge" *ngIf="unread">{{ unread }}</span>
+    </button>
+
+    <!-- Panneau déroulant (nouveau design) -->
+    <div class="notification-panel" *ngIf="openPanel">
+      <div class="notification-header">
+        <h2>Notifications</h2>
+        <p *ngIf="unread">Vous avez {{ unread }} message{{ unread > 1 ? 's' : '' }} non lu{{ unread > 1 ? 's' : '' }}</p>
+        <p *ngIf="!unread">Aucun message non lu</p>
+      </div>
+
+      <div class="empty" *ngIf="displayedNotifications.length === 0">
+        Aucune notification
+      </div>
+
+      <div class="notification-item" *ngFor="let n of displayedNotifications" [class.unread]="!n.isRead" [class.expanded]="isExpanded(n.id)" (click)="toggleExpand(n, $event)">
+        <div class="dot-container">
+          <div class="dot"></div>
+          <div class="vertical-line"></div>
+        </div>
+        <div class="notification-content">
+          <div class="notification-title">{{ n.title }}</div>
+          <div class="notification-time">{{ n.createdAt | date:'short' }}</div>
+          <span class="badge-new" *ngIf="!n.isRead">New</span>
+          
+          <!-- Contenu détaillé (visible quand expanded) -->
+          <div class="notification-details" *ngIf="isExpanded(n.id)">
+            <p class="notification-message">{{ n.message }}</p>
+          </div>
+        </div>
+        <!-- Modern trash/delete icon -->
+        <svg class="delete-icon" width="20" height="20" viewBox="0 0 24 24" (click)="deleteNotification($event, n)">
+          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
+        </svg>
+      </div>
+
+      <div class="view-all" (click)="toggleViewAll($event)">
+        {{ showingAll ? 'View Less' : 'View All' }}
+      </div>
+    </div>
+
+    <!-- Aide -->
+    <button class="help" aria-label="Aide / FAQ">
+      <svg viewBox="0 0 24 24" class="help-icon">
+        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" />
+        <path d="M12 17V16.9988" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12 14.5C11.9816 13.6954 12.0626 13.0307 12.6746 12.3394C13.7232 11.3384 15 10.5 15 8.5C15 6.5 13.5 5 12 5C10.5 5 9.36673 5.83973 8.81358 7.00277" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+
+    <!-- Profil -->
+    <div class="profile" (click)="toggleProfileMenu()">
+      <!-- ON UTILISE [ngSrc] avec placeholder non vide -->
+      <div class="avatar-container">
+        <img
+          [ngSrc]="avatarUrl"
+          width="32" height="32"
+          alt="Avatar"
+          class="avatar"
+        />
+        <span class="status-indicator"></span>
+      </div>
+      <div class="profile-text">
+        <span class="name">{{ profileName }}</span>
+        <span class="role">{{ profileRole }}</span>
+      </div>
+
+      <!-- Menu profil dropdown -->
+      <div class="profile-menu" *ngIf="showProfileMenu">
+        <div class="profile-menu-item" (click)="showUserProfile($event)">
+          <svg viewBox="0 0 24 24" class="icon-blue">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Mon profil
+        </div>
+        
+        <div class="profile-menu-item" (click)="navigateToSettings($event)">
+          <svg viewBox="0 0 24 24" class="icon-blue">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Paramètres
+        </div>
+
+        <div class="profile-menu-item delete-option" (click)="deleteProfilePhoto($event)">
+          <svg viewBox="0 0 24 24" class="icon-red">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </svg>
+          Supprimer la photo
+        </div>
+
+        <div class="profile-menu-item logout-option" (click)="logout($event)">
+          <svg viewBox="0 0 24 24" class="icon-blue">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Se déconnecter
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Modal Profil Utilisateur -->
+<div class="profile-modal-overlay" *ngIf="showProfileModal" (click)="closeProfileModal($event)">
+  <div class="profile-modal" (click)="$event.stopPropagation()">
+    <!-- Header orange et bouton fermer -->
+    <div class="profile-modal-header">
+      <button class="close-button" (click)="closeProfileModal($event)">×</button>
+    </div>
+    
+    <!-- Contenu du profil -->
+    <div class="profile-modal-content" *ngIf="userDetails">
+      <!-- Photo de profil avec bouton de changement -->
+      <div class="profile-photo-container">
+        <img [src]="userDetails.photo ? userSvc.photoUrl(userDetails.photo) : 'assets/profile.png'" 
+             alt="Photo de profil" class="profile-photo">
+        <button class="change-photo-button" (click)="triggerFileInput($event)">
+          <svg viewBox="0 0 24 24" class="camera-icon">
+            <circle cx="12" cy="12" r="3.5"/>
+            <path d="M19 20H5a2 2 0 01-2-2V9a2 2 0 012-2h3.1a2 2 0 001.83-1.19l.9-1.8A2 2 0 0112.6 3h.8a2 2 0 011.77 1.01l.9 1.8A2 2 0 0118 7h1a2 2 0 012 2v9a2 2 0 01-2 2z"/>
+          </svg>
+        </button>
+        <!-- Input file caché pour le changement de photo -->
+        <input type="file" id="profilePhotoInput" 
+               accept="image/jpeg,image/png,image/jpg" 
+               style="display:none" 
+               (change)="onPhotoSelected($event)">
+      </div>
+      
+      <!-- Nom et rôle -->
+      <h1 class="profile-name">{{ userDetails.nom }}</h1>
+      <div class="profile-role-badge">{{ userDetails.role }}</div>
+      
+      <!-- Informations détaillées -->
+      <div class="profile-details">
+        <div class="profile-info-row">
+          <span class="profile-label">ID:</span>
+          <span class="profile-value">{{ userDetails.id }}</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Email:</span>
+          <span class="profile-value">{{ userDetails.email }}</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Statut:</span>
+          <span class="profile-value">Actif</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Expériences:</span>
+          <span class="profile-value">{{ userDetails.experiences || 0 }} ans</span>
+        </div>
+        
+        <div class="profile-info-row">
+          <span class="profile-label">Compétences:</span>
+          <span class="profile-value">{{ userDetails.competences || 'Non spécifiées' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,183 @@
+<div class="planning-container" #ganttContainer>
+  <!-- En-tête avec sélecteur de projet -->
+  <div class="planning-header">
+    <div class="header-left">
+      <h1 class="page-title">Diagramme de Gantt</h1>
+      <div class="project-selector">
+        <select 
+          [disabled]="isLoading" 
+          [(ngModel)]="selectedProjectId" 
+          (change)="selectProject(selectedProjectId!)"
+          [ngClass]="{'empty': !selectedProjectId}"
+        >
+          <option [ngValue]="null" disabled selected>Sélectionner un projet</option>
+          <option *ngFor="let project of projects" [ngValue]="project.id">{{ project.nom }}</option>
+        </select>
+        <div class="selector-icon">
+          <i class="fas fa-chevron-down"></i>
+        </div>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <div class="current-month-display">
+        {{ currentMonthLabel }}
+      </div>
+      <div class="timeline-controls">
+        <button class="ctrl-btn" title="Mois précédent" (click)="goToPreviousMonth()">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="ctrl-btn today-btn" title="Mois actuel" (click)="goToCurrentMonth()">
+          <i class="fas fa-calendar-day"></i>
+        </button>
+        <button class="ctrl-btn" title="Mois suivant" (click)="goToNextMonth()">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- État de chargement -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement en cours...</p>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="errorMsg" class="error-container" [ngClass]="{'demo-mode': errorMsg.includes('Mode démo')}">
+    <div class="error-icon">
+      <i *ngIf="!errorMsg.includes('Mode démo')" class="fas fa-exclamation-triangle"></i>
+      <i *ngIf="errorMsg.includes('Mode démo')" class="fas fa-code"></i>
+    </div>
+    <p>{{ errorMsg }}</p>
+    <div *ngIf="errorMsg.includes('Mode démo')" class="demo-info">
+      Vous travaillez avec des données fictives.<br/>
+      Vous pouvez quand même redimensionner les tâches.
+      <div class="demo-actions">
+        <button class="demo-refresh-btn" (click)="resetAppMode()">
+          <i class="fas fa-sync"></i> Tenter de revenir en mode API
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si aucun projet sélectionné -->
+  <div *ngIf="!isLoading && !selectedProjectId" class="empty-state">
+    <div class="empty-icon">
+      <i class="fas fa-tasks"></i>
+    </div>
+    <h2>Aucun projet sélectionné</h2>
+    <p>Veuillez sélectionner un projet pour afficher son diagramme de Gantt</p>
+  </div>
+  
+  <!-- Le diagramme de Gantt -->
+  <div *ngIf="!isLoading && selectedProjectId && ganttTasks.length > 0" class="gantt-chart">
+    <!-- En-tête avec les jours -->
+    <div class="gantt-header">
+      <!-- Numéros des jours -->
+      <div class="days-row">
+        <div class="task-label">Tâche</div>
+        <div class="period-label">Période</div>
+        <div class="timeline-days">
+          <ng-container *ngFor="let month of displayMonths">
+            <div 
+              *ngFor="let day of month.days" 
+              class="day-cell"
+              [ngClass]="{'weekend': day.isWeekend, 'today': day.isToday}"
+            >
+              {{ getDayDisplay(day) }}
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Corps du diagramme avec les tâches -->
+    <div class="gantt-body">
+      <div *ngFor="let task of ganttTasks" class="gantt-row">
+        <!-- Nom de la tâche -->
+        <div class="task-label">
+          <div class="task-name">{{ task.nom }}</div>
+        </div>
+        
+        <!-- Période (jours) -->
+        <div class="period-label">
+          <div class="task-period">
+            <span>{{ getTaskDurationInDays(task) }}</span>
+          </div>
+        </div>
+        
+        <!-- Barre de tâche -->
+        <div class="timeline-container">
+          <div class="task-bars">
+            <div 
+              class="task-bar"
+              [ngStyle]="getTaskBarStyle(task)"
+            >
+              <!-- Poignée de redimensionnement gauche -->
+              <div class="resize-handle left-handle" (mousedown)="startResize($event, task.id, 'left')">
+                <div class="handle-icon">
+                  <i class="fas fa-grip-lines-vertical"></i>
+                </div>
+              </div>
+              
+              <!-- Contenu de la barre de tâche -->
+              <div class="task-bar-content">
+                <div class="task-bar-label">{{ task.nom }}</div>
+              </div>
+              
+              <!-- Indicateur d'avancement -->
+              <div *ngIf="task.avancement" class="progress-indicator" [style.width.%]="task.avancement"></div>
+              
+              <!-- Poignée de redimensionnement droite -->
+              <div class="resize-handle right-handle" (mousedown)="startResize($event, task.id, 'right')">
+                <div class="handle-icon">
+                  <i class="fas fa-grip-lines-vertical"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Grille de fond -->
+          <div class="timeline-grid">
+            <ng-container *ngFor="let month of displayMonths">
+              <div 
+                *ngFor="let day of month.days" 
+                class="grid-cell"
+                [ngClass]="{'weekend': day.isWeekend, 'today': day.isToday}"
+              ></div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Message si aucune tâche trouvée -->
+  <div *ngIf="!isLoading && selectedProjectId && ganttTasks.length === 0" class="empty-state">
+    <div class="empty-icon">
+      <i class="fas fa-clipboard-list"></i>
+    </div>
+    <h2>Aucune tâche planifiée</h2>
+    <p>Ce projet ne contient pas de tâches avec des dates planifiées</p>
+  </div>
+  
+  <!-- Légende des priorités -->
+  <div class="gantt-legend" *ngIf="!isLoading && selectedProjectId && ganttTasks.length > 0">
+    <div class="legend-title">Statut des tâches</div>
+    <div class="legend-items">
+      <div class="legend-item">
+        <div class="legend-color" [style.backgroundColor]="getTaskColorByStatus('TERMINE')"></div>
+        <span>Terminé</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" [style.backgroundColor]="getTaskColorByStatus('EN_COURS')"></div>
+        <span>En cours</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" [style.backgroundColor]="getTaskColorByStatus('EN_ATTENTE')"></div>
+        <span>En attente</span>
+      </div>
+    </div>
+  </div>
+</div>
