@@ -31,10 +31,8 @@ export class GestionUtilisateursComponent implements OnInit {
   users: User[] = [];
   filteredUsers: User[] = [];
   
-  
+  //critere de recherche
   searchTerm: string = '';
-  
-  
   showSearchCriteria: boolean = false;
   activeFilter: string = ''; 
   
