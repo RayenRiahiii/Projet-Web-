@@ -5,7 +5,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { ProjectService } from '../../services/project.service';
 import { TaskService } from '../../services/task.service';
 import { Project, ProjectStatut, ProjectDto } from '../../models/project.model';
-import { Task } from '../../models/task.model';
+import { Task, TaskDto } from '../../models/task.model';
 import { jwtDecode } from 'jwt-decode';
 import { AuthService } from '../../services/auth.service';
 
@@ -29,34 +29,39 @@ interface JwtPayload {
   styleUrl: './projets.component.css'
 })
 export class ProjetsComponent implements OnInit {
-  
+
   projects: Project[] = [];
   filteredProjects: Project[] = [];
-  
-  
+
+
   searchTerm: string = '';
-  
-  
+
+
   showSearchCriteria: boolean = false;
-  activeFilter: string = ''; 
-  
-  
+  activeFilter: string = '';
+
+
   userId?: number;
   userRole?: string;
 
-  
+
   showEditModal: boolean = false;
   editForm: FormGroup;
   currentProjectId?: number;
   isSubmitting: boolean = false;
   errorMsg?: string;
-  
-  
+
+
   showDetailsModal: boolean = false;
   currentProject?: Project;
   projectTasks: Task[] = [];
   loadingTasks: boolean = false;
-  
+  availableDevelopers: Array<{ id: number; nom: string }> = [];
+
+  taskForm: FormGroup;
+  taskSubmitting = false;
+  taskError?: string;
+
   constructor(
     private projectService: ProjectService,
     private authService: AuthService,
@@ -70,13 +75,23 @@ export class ProjetsComponent implements OnInit {
       dateFinPrevue: [''],
       statut: ['']
     });
+
+    this.taskForm = this.fb.group({
+      nom: ['', [Validators.required]],
+      description: [''],
+      priorite: ['MOYENNE', [Validators.required]],
+      dateLimite: [''],
+      responsableId: [''],
+      estimatedDays: [''],
+      spentDays: ['']
+    });
   }
-  
+
   ngOnInit(): void {
     this.loadUserInfo();
     this.loadProjects();
   }
-  
+
   loadUserInfo(): void {
     const token = this.authService.getToken();
     if (token) {
@@ -85,10 +100,10 @@ export class ProjetsComponent implements OnInit {
       this.userRole = decoded.role;
     }
   }
-  
+
   loadProjects(): void {
     if (this.userRole === 'MANAGER' && this.userId) {
-      
+
       this.projectService.getByManager(this.userId).subscribe({
         next: (data) => {
           this.projects = data;
@@ -97,7 +112,7 @@ export class ProjetsComponent implements OnInit {
         error: (err) => console.error('Erreur lors du chargement des projets:', err)
       });
     } else {
-      
+
       this.projectService.getAllDetails().subscribe({
         next: (data) => {
           this.projects = data;
@@ -107,80 +122,80 @@ export class ProjetsComponent implements OnInit {
       });
     }
   }
-  
-  
+
+
   searchProjects(): void {
     if (!this.searchTerm.trim()) {
-      
+
       this.applyActiveFilter();
     } else {
       const term = this.searchTerm.toLowerCase().trim();
-      
-      this.filteredProjects = this.filteredProjects.filter(project => 
-        project.nom.toLowerCase().includes(term) || 
+
+      this.filteredProjects = this.filteredProjects.filter(project =>
+        project.nom.toLowerCase().includes(term) ||
         project.id.toString().includes(term)
       );
     }
   }
-  
-  
+
+
   toggleSearchCriteria(): void {
     this.showSearchCriteria = !this.showSearchCriteria;
   }
-  
-  
+
+
   filterByStatus(status: string): void {
     this.activeFilter = status;
     this.filteredProjects = this.projects.filter(project => project.statut === status);
-    
-    
+
+
     if (this.searchTerm.trim()) {
       this.searchProjects();
     }
   }
-  
-  
+
+
   filterByDate(dateType: string): void {
     this.activeFilter = dateType;
     const today = new Date();
-    
+
     if (dateType === 'recent') {
-      
+
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(today.getDate() - 30);
-      
+
       this.filteredProjects = this.projects.filter(project => {
         if (!project.dateDebut) return false;
         const startDate = new Date(project.dateDebut);
         return startDate >= thirtyDaysAgo && startDate <= today;
       });
-    } 
+    }
     else if (dateType === 'upcoming') {
-      
+
       const thirtyDaysLater = new Date();
       thirtyDaysLater.setDate(today.getDate() + 30);
-      
+
       this.filteredProjects = this.projects.filter(project => {
         if (!project.dateDebut) return false;
         const startDate = new Date(project.dateDebut);
         return startDate > today && startDate <= thirtyDaysLater;
       });
     }
-    
-    
+
+
     if (this.searchTerm.trim()) {
       this.searchProjects();
     }
   }
-  
-  
+
+
   resetFilters(): void {
     this.activeFilter = '';
     this.searchTerm = '';
     this.filteredProjects = [...this.projects];
   }
-  
-  
+
+
   private applyActiveFilter(): void {
     if (!this.activeFilter) {
       this.filteredProjects = [...this.projects];
@@ -190,16 +205,16 @@ export class ProjetsComponent implements OnInit {
       this.filterByDate(this.activeFilter);
     }
   }
-  
-  
+
+
   openEditModal(projectId: number): void {
     this.currentProjectId = projectId;
     this.errorMsg = undefined;
-    
-    
+
+
     this.projectService.getById(projectId).subscribe({
       next: (project) => {
-        
+
         this.editForm.patchValue({
           nom: project.nom,
           description: project.description || '',
@@ -207,12 +222,12 @@ export class ProjetsComponent implements OnInit {
           dateFinPrevue: project.dateFinPrevue ? project.dateFinPrevue.substring(0, 10) : '',
           statut: project.statut
         });
-        
-        
+
+
         this.editForm.markAsPristine();
         this.editForm.markAsUntouched();
-        
-        
+
+
         this.showEditModal = true;
       },
       error: (err) => {
@@ -221,51 +236,51 @@ export class ProjetsComponent implements OnInit {
       }
     });
   }
-  
-  
+
+
   closeEditModal(event: Event): void {
     event.preventDefault();
     this.showEditModal = false;
     this.currentProjectId = undefined;
     this.editForm.reset();
   }
-  
-  
+
+
   onSubmitEdit(): void {
     if (this.editForm.invalid || !this.currentProjectId) {
       return;
     }
-    
+
     this.isSubmitting = true;
     this.errorMsg = undefined;
-    
+
     const formData = this.editForm.value;
-    
-    
+
+
     const projectDto: ProjectDto = {
       nom: formData.nom,
       description: formData.description || undefined,
       dateDebut: formData.dateDebut || undefined,
       dateFinPrevue: formData.dateFinPrevue || undefined,
       statut: formData.statut as ProjectStatut,
-      type: this.getProjectType(this.currentProjectId), 
-      managerId: this.getProjectManagerId(this.currentProjectId) 
+      type: this.getProjectType(this.currentProjectId),
+      managerId: this.getProjectManagerId(this.currentProjectId)
     };
-    
-    
+
+
     this.projectService.update(this.currentProjectId, projectDto).subscribe({
       next: (updatedProject) => {
-        
-        this.projects = this.projects.map(p => 
+
+        this.projects = this.projects.map(p =>
           p.id === this.currentProjectId ? updatedProject : p
         );
-        
-        
-        this.filteredProjects = this.filteredProjects.map(p => 
+
+
+        this.filteredProjects = this.filteredProjects.map(p =>
           p.id === this.currentProjectId ? updatedProject : p
         );
-        
-        
+
+
         this.showEditModal = false;
         this.editForm.reset();
         this.currentProjectId = undefined;
@@ -278,19 +293,19 @@ export class ProjetsComponent implements OnInit {
       }
     });
   }
-  
-  
+
+
   private getProjectType(projectId: number): any {
     const project = this.projects.find(p => p.id === projectId);
     return project?.type || 'SIMPLE';
   }
-  
-  
+
+
   private getProjectManagerId(projectId: number): number {
     const project = this.projects.find(p => p.id === projectId);
     return project?.manager?.id || this.userId || 0;
   }
-  
+
   getStatusClass(status: ProjectStatut): string {
     switch (status) {
       case 'EN_COURS':
@@ -303,18 +318,29 @@ export class ProjetsComponent implements OnInit {
         return '';
     }
   }
-  
-  
+
+
   openDetailsModal(projectId: number): void {
     this.loadingTasks = true;
-    
-    
+
+
     this.projectService.getDetails(projectId).subscribe({
       next: (project) => {
         this.currentProject = project;
         this.showDetailsModal = true;
-        
-        
+        this.availableDevelopers = project.assignedDevelopers ?? [];
+        this.taskForm.reset({
+          nom: '',
+          description: '',
+          priorite: 'MOYENNE',
+          dateLimite: '',
+          responsableId: '',
+          estimatedDays: '',
+          spentDays: ''
+        });
+        this.taskError = undefined;
+
+
         this.taskService.getByProject(projectId).subscribe({
           next: (tasks) => {
             this.projectTasks = tasks;
@@ -331,18 +357,18 @@ export class ProjetsComponent implements OnInit {
       }
     });
   }
-  
-  
+
+
   getProjectProgressPercentage(): number {
     if (!this.projectTasks || this.projectTasks.length === 0) {
       return 0;
     }
-    
-    
+
+
     const completedTasks = this.projectTasks.filter(task => task.statut === 'TERMINEE').length;
     let percentage = Math.round((completedTasks / this.projectTasks.length) * 100);
-    
-    
+
+
     if (this.projectTasks.some(task => task.avancement !== undefined)) {
       const totalTasks = this.projectTasks.length;
       let totalProgress = this.projectTasks.reduce((sum, task) => {
@@ -353,45 +379,90 @@ export class ProjetsComponent implements OnInit {
         }
         return sum;
       }, 0);
-      
+
       percentage = Math.round(totalProgress / totalTasks);
     }
-    
+
     return Math.min(100, Math.max(0, percentage));
   }
-  
-  
+
+
   getProjectDuration(): number {
     if (!this.currentProject || !this.currentProject.dateDebut || !this.currentProject.dateFinPrevue) {
       return 0;
     }
-    
+
     const startDate = new Date(this.currentProject.dateDebut);
     const endDate = new Date(this.currentProject.dateFinPrevue);
-    
-    
+
+
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    
+
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
-  
-  
+
+
   isDateUrgent(dateStr?: string): boolean {
     if (!dateStr) return false;
-    
+
     const taskDate = new Date(dateStr);
     const today = new Date();
     const diffTime = taskDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays >= 0 && diffDays <= 3;
   }
-  
-  
+
+
   closeDetailsModal(event: Event): void {
     event.preventDefault();
     this.showDetailsModal = false;
     this.currentProject = undefined;
     this.projectTasks = [];
+  }
+
+
+  addTask(): void {
+    if (!this.currentProject || this.taskForm.invalid) {
+      this.taskForm.markAllAsTouched();
+      return;
+    }
+
+    this.taskSubmitting = true;
+    this.taskError = undefined;
+
+    const formValue = this.taskForm.value;
+    const dto: TaskDto = {
+      nom: formValue.nom,
+      description: formValue.description || undefined,
+      statut: 'A_FAIRE',
+      dateLimite: formValue.dateLimite || undefined,
+      projetId: this.currentProject.id,
+      responsableId: formValue.responsableId ? Number(formValue.responsableId) : undefined,
+      priorite: formValue.priorite,
+      estimatedDays: formValue.estimatedDays ? Number(formValue.estimatedDays) : undefined,
+      spentDays: formValue.spentDays ? Number(formValue.spentDays) : undefined
+    };
+
+    this.taskService.create(dto).subscribe({
+      next: (created) => {
+        this.projectTasks = [...this.projectTasks, created];
+        this.taskForm.reset({
+          nom: '',
+          description: '',
+          priorite: 'MOYENNE',
+          dateLimite: '',
+          responsableId: '',
+          estimatedDays: '',
+          spentDays: ''
+        });
+        this.taskSubmitting = false;
+      },
+      error: (err) => {
+        console.error('Erreur lors de la cr\u00e9ation de la t\u00e2che:', err);
+        this.taskError = "Impossible d'ajouter la t\u00e2che pour le moment.";
+        this.taskSubmitting = false;
+      }
+    });
   }
 }
